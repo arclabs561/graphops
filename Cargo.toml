@@ -1,0 +1,34 @@
+[package]
+name = "graphops"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+description = "Graph operators: PageRank/PPR/walks/reachability/node2vec/betweenness."
+publish = true
+
+[dependencies]
+serde = { workspace = true, optional = true, features = ["derive"] }
+rand = { workspace = true }
+rand_chacha = { workspace = true }
+rand_distr = { workspace = true }
+rayon = { workspace = true, optional = true }
+ordered-float = { workspace = true }
+thiserror = { workspace = true }
+petgraph = { workspace = true, optional = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
+criterion = { workspace = true }
+stats_alloc = "0.1"
+
+[features]
+default = []
+serde = ["dep:serde"]
+parallel = ["dep:rayon"]
+petgraph = ["dep:petgraph"]
+
