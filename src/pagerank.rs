@@ -310,7 +310,6 @@ mod tests {
     proptest! {
         #[test]
         fn prop_pagerank_unweighted_sums_to_one(n in 1usize..10, edges in proptest::collection::vec((0usize..10, 0usize..10), 0..40)) {
-            let n = n;
             // Build unweighted adjacency matrix with 0/1 entries.
             let mut adj = vec![vec![0.0_f64; n]; n];
             for (u,v) in edges {
@@ -341,7 +340,6 @@ mod tests {
                 fn edge_weight(&self, source: usize, target: usize) -> f64 { self.w[source][target] }
             }
 
-            let n = n;
             let u = u % n;
             let mut v = v % n;
             if v == u { v = (v + 1) % n; }

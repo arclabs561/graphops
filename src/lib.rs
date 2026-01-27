@@ -49,9 +49,9 @@ pub use pagerank::{
     pagerank_checked_run, pagerank_run, pagerank_weighted_checked_run, pagerank_weighted_run,
     PageRankRun,
 };
+pub use partition::{connected_components, label_propagation};
 pub use ppr::{personalized_pagerank, personalized_pagerank_checked};
 pub use ppr::{personalized_pagerank_checked_run, personalized_pagerank_run};
-pub use partition::{connected_components, label_propagation};
 pub use random_walk::{
     generate_biased_walks, generate_biased_walks_from_nodes, generate_biased_walks_ref,
     generate_biased_walks_ref_from_nodes, generate_biased_walks_ref_streaming_from_nodes,

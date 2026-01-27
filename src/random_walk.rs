@@ -393,7 +393,7 @@ fn sample_biased_rejection<R: Rng>(
     loop {
         let candidate = *neighbors.choose(rng).unwrap();
         let r: f32 = rng.random();
-        let is_in_edge = prev_neighbors.iter().any(|&x| x == candidate);
+        let is_in_edge = prev_neighbors.contains(&candidate);
         let unnorm_prob = if candidate == prev_node {
             1.0 / p
         } else if is_in_edge {

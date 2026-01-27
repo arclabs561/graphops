@@ -153,13 +153,7 @@ mod tests {
     fn connected_components_two_components() {
         // 0-1-2 and 3-4
         let g = VecGraph {
-            adj: vec![
-                vec![1],
-                vec![0, 2],
-                vec![1],
-                vec![4],
-                vec![3],
-            ],
+            adj: vec![vec![1], vec![0, 2], vec![1], vec![4], vec![3]],
         };
         let labels = connected_components(&g);
         assert_eq!(labels.len(), 5);
@@ -190,4 +184,3 @@ mod tests {
         assert_eq!(a.len(), g.node_count());
     }
 }
-

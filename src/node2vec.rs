@@ -171,13 +171,14 @@ fn fill_next_node2vec_weighted_buf<G: WeightedGraphRef>(
         if x == prev {
             continue;
         }
-        let is_common = prev_nbrs.iter().any(|&y| y == x);
+        let is_common = prev_nbrs.contains(&x);
         if !is_common {
             buf[i] /= config.q;
         }
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn sample_next_node2vec_plus<G: WeightedGraphRef, R: Rng>(
     graph: &G,
     cur: usize,
@@ -193,6 +194,7 @@ fn sample_next_node2vec_plus<G: WeightedGraphRef, R: Rng>(
     sample_cdf(rng, nbrs, buf)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn fill_next_node2vec_plus_buf<G: WeightedGraphRef>(
     graph: &G,
     cur: usize,
@@ -258,10 +260,10 @@ fn compute_noise_thresholds<G: WeightedGraphRef>(graph: &G, gamma: f32) -> Vec<f
     let n = graph.node_count();
     let mut thr = vec![0.0f32; n];
 
-    for v in 0..n {
+    for (v, thr_v) in thr.iter_mut().enumerate().take(n) {
         let (_nbrs, wts) = graph.neighbors_and_weights_ref(v);
         if wts.is_empty() {
-            thr[v] = 0.0;
+            *thr_v = 0.0;
             continue;
         }
 
@@ -276,7 +278,7 @@ fn compute_noise_thresholds<G: WeightedGraphRef>(graph: &G, gamma: f32) -> Vec<f
             / (wts.len() as f32);
         let std = var.sqrt();
 
-        thr[v] = (mean + gamma * std).max(0.0);
+        *thr_v = (mean + gamma * std).max(0.0);
     }
 
     thr
@@ -289,7 +291,7 @@ fn sample_cdf<R: Rng>(rng: &mut R, nbrs: &[usize], weights: &[f32]) -> usize {
     }
 
     let sum = weights.iter().copied().sum::<f32>();
-    if !(sum > 0.0) {
+    if !sum.is_finite() || sum <= 0.0 {
         return *nbrs.choose(rng).unwrap();
     }
 
