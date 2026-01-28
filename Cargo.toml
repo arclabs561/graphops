@@ -10,6 +10,9 @@ homepage = "https://github.com/arclabs561/graphops"
 documentation = "https://docs.rs/graphops"
 description = "Graph operators: PageRank/PPR/walks/reachability/node2vec/betweenness."
 publish = true
+readme = "README.md"
+keywords = ["pagerank", "ppr", "node2vec", "graphs"]
+categories = ["algorithms", "mathematics"]
 
 [dependencies]
 serde = { version = "1.0", optional = true, features = ["derive"] }
