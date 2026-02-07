@@ -2,20 +2,12 @@
 
 Graph operators and centralities as a small Rust crate.
 
-Implemented operators include:
-
-- PageRank and Personalized PageRank
-- random walks and biased walks (node2vec-style)
-- reachability counts
-- connected components / label propagation
-- top-k helpers
-- (feature-gated) betweenness centrality via `petgraph`
-
 ## Usage
 
 ```toml
 [dependencies]
-graphops = "0.1.0"
+graphops = { version = "0.1.0", features = ["petgraph"] }
+petgraph = "0.6"
 ```
 
 Example:
@@ -33,9 +25,18 @@ let scores = pagerank(&g, PageRankConfig::default());
 assert_eq!(scores.len(), g.node_count());
 ```
 
+## Implemented Operators
+
+- PageRank and Personalized PageRank
+- Random walks and biased walks (node2vec-style)
+- Reachability counts
+- Connected components / label propagation
+- Top-k helpers
+- (feature-gated) Betweenness centrality via `petgraph`
+
 ## Features
 
-- `serde`: enable serde on some graph adapters (when available).
+- `serde`: enable serde on some graph adapters.
 - `parallel`: enable parallel walk generation.
 - `petgraph`: enable `petgraph` adapters + betweenness helper.
 
