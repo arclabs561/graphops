@@ -35,3 +35,7 @@ serde = ["dep:serde"]
 parallel = ["dep:rayon"]
 petgraph = ["dep:petgraph"]
 
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
