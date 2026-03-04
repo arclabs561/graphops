@@ -1,5 +1,9 @@
 # graphops
 
+[![crates.io](https://img.shields.io/crates/v/graphops.svg)](https://crates.io/crates/graphops)
+[![Documentation](https://docs.rs/graphops/badge.svg)](https://docs.rs/graphops)
+[![CI](https://github.com/arclabs561/graphops/actions/workflows/ci.yml/badge.svg)](https://github.com/arclabs561/graphops/actions/workflows/ci.yml)
+
 Graph operators and centralities as a small Rust crate.
 
 ## Usage
