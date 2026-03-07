@@ -39,6 +39,26 @@ pub fn personalized_pagerank_checked<G: Graph>(
     Ok(personalized_pagerank(graph, config, personalization))
 }
 
+/// Compute Personalized PageRank with a teleport bias.
+///
+/// # Examples
+///
+/// ```
+/// use graphops::{personalized_pagerank, AdjacencyMatrix, PageRankConfig};
+///
+/// // 3-node cycle: 0->1->2->0, teleport biased toward node 0
+/// let adj = vec![
+///     vec![0.0, 1.0, 0.0],
+///     vec![0.0, 0.0, 1.0],
+///     vec![1.0, 0.0, 0.0],
+/// ];
+/// let ppr = personalized_pagerank(
+///     &AdjacencyMatrix(&adj),
+///     PageRankConfig::default(),
+///     &[1.0, 0.0, 0.0],
+/// );
+/// assert!(ppr[0] > ppr[1]); // node 0 gets highest PPR
+/// ```
 pub fn personalized_pagerank<G: Graph>(
     graph: &G,
     config: PageRankConfig,

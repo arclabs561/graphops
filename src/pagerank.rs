@@ -64,6 +64,24 @@ pub fn pagerank_checked<G: Graph>(graph: &G, config: PageRankConfig) -> Result<V
     Ok(pagerank(graph, config))
 }
 
+/// Compute PageRank scores for all nodes.
+///
+/// # Examples
+///
+/// ```
+/// use graphops::{pagerank, AdjacencyMatrix, PageRankConfig};
+///
+/// // 3-node directed graph: 0->1, 1->2, 2->0
+/// let adj = vec![
+///     vec![0.0, 1.0, 0.0],
+///     vec![0.0, 0.0, 1.0],
+///     vec![1.0, 0.0, 0.0],
+/// ];
+/// let scores = pagerank(&AdjacencyMatrix(&adj), PageRankConfig::default());
+/// assert_eq!(scores.len(), 3);
+/// let total: f64 = scores.iter().sum();
+/// assert!((total - 1.0).abs() < 1e-6);
+/// ```
 pub fn pagerank<G: Graph>(graph: &G, config: PageRankConfig) -> Vec<f64> {
     pagerank_run(graph, config).scores
 }

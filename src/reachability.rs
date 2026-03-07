@@ -19,6 +19,15 @@
 /// - Counts do **not** include the start node itself.
 /// - This is \(O(n (n + m))\) in the worst case; it’s intended for graphs up to a few thousand
 ///   nodes where “blast radius” style counts are useful.
+/// # Examples
+///
+/// ```
+/// // Chain: 0->1->2, plus isolated node 3
+/// let (dependents, deps) = graphops::reachability_counts_edges(4, &[(0,1),(1,2)]);
+/// assert_eq!(deps[0], 2); // node 0 can reach 1 and 2
+/// assert_eq!(deps[2], 0); // node 2 reaches nobody
+/// assert_eq!(dependents[2], 2); // nodes 0 and 1 can reach node 2
+/// ```
 pub fn reachability_counts_edges(n: usize, edges: &[(usize, usize)]) -> (Vec<usize>, Vec<usize>) {
     let mut fwd: Vec<Vec<usize>> = vec![Vec::new(); n];
     let mut rev: Vec<Vec<usize>> = vec![Vec::new(); n];
