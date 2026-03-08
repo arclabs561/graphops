@@ -32,6 +32,20 @@ impl Default for WalkConfig {
 ///
 /// We use reservoir sampling (uniform sample without replacement) to keep memory bounded, while
 /// staying deterministic for a fixed seed.
+///
+/// ```
+/// use graphops::sample_start_nodes_reservoir;
+///
+/// let nodes = sample_start_nodes_reservoir(1000, 5, 42);
+/// assert_eq!(nodes.len(), 5);
+/// assert!(nodes.iter().all(|&n| n < 1000));
+///
+/// // Deterministic: same seed -> same result
+/// assert_eq!(nodes, sample_start_nodes_reservoir(1000, 5, 42));
+///
+/// // k >= n returns all nodes
+/// assert_eq!(sample_start_nodes_reservoir(3, 10, 0).len(), 3);
+/// ```
 pub fn sample_start_nodes_reservoir(node_count: usize, k: usize, seed: u64) -> Vec<usize> {
     let mut rng = ChaCha8Rng::seed_from_u64(seed);
     if k == 0 || node_count == 0 {

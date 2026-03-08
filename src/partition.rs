@@ -34,6 +34,22 @@ fn renumber(labels: &mut [usize]) -> usize {
 ///
 /// For directed graphs: this computes weakly-connected components if the adapter’s
 /// neighbor lists include both in- and out-neighbors; otherwise it follows the adapter.
+///
+/// ```
+/// use graphops::{connected_components, GraphRef};
+///
+/// struct G(Vec<Vec<usize>>);
+/// impl GraphRef for G {
+///     fn node_count(&self) -> usize { self.0.len() }
+///     fn neighbors_ref(&self, n: usize) -> &[usize] { &self.0[n] }
+/// }
+///
+/// // Two components: {0,1,2} and {3,4}
+/// let g = G(vec![vec![1], vec![0, 2], vec![1], vec![4], vec![3]]);
+/// let labels = connected_components(&g);
+/// assert_eq!(labels[0], labels[1]);
+/// assert_ne!(labels[0], labels[3]);
+/// ```
 pub fn connected_components<G: GraphRef>(graph: &G) -> Vec<usize> {
     let n = graph.node_count();
     let mut labels = vec![usize::MAX; n];
@@ -73,6 +89,26 @@ pub fn connected_components<G: GraphRef>(graph: &G) -> Vec<usize> {
 /// Notes:
 /// - The algorithm is defined on undirected graphs; on directed graphs behavior depends on adapter.
 /// - For isolated nodes, the label remains its own id.
+///
+/// ```
+/// use graphops::{label_propagation, GraphRef};
+///
+/// struct G(Vec<Vec<usize>>);
+/// impl GraphRef for G {
+///     fn node_count(&self) -> usize { self.0.len() }
+///     fn neighbors_ref(&self, n: usize) -> &[usize] { &self.0[n] }
+/// }
+///
+/// // Two cliques connected by one edge
+/// let g = G(vec![
+///     vec![1, 2],    vec![0, 2],    vec![0, 1, 3],
+///     vec![2, 4, 5], vec![3, 5],    vec![3, 4],
+/// ]);
+/// let labels = label_propagation(&g, 50, 42);
+/// assert_eq!(labels.len(), 6);
+/// // Deterministic: same seed -> same result
+/// assert_eq!(labels, label_propagation(&g, 50, 42));
+/// ```
 pub fn label_propagation<G: GraphRef>(graph: &G, max_iters: usize, seed: u64) -> Vec<usize> {
     use rand::{rngs::StdRng, seq::SliceRandom, SeedableRng};
     use std::collections::HashMap;
