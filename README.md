@@ -127,6 +127,14 @@ let scores = betweenness_centrality(&g);
 // scores[1] is highest (node b is on the only a->c path)
 ```
 
+## Examples
+
+[**pagerank.rs**](examples/pagerank.rs) -- PageRank on a 4-node directed graph with labeled output. Demonstrates the adapter pattern: define an adjacency matrix, pass it to `pagerank`, and inspect ranked scores. Shows how link structure determines authority (node C, the most linked-to, ranks highest).
+
+```bash
+cargo run --example pagerank
+```
+
 ## Feature flags
 
 | Feature | What it adds |
