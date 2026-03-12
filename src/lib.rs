@@ -1,3 +1,4 @@
+#![warn(missing_docs)]
 //! `graphops`: graph operators (walk/diffusion + related centralities).
 //!
 //! This crate is the canonical home for operator implementations in this workspace.
