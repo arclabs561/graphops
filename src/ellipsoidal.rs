@@ -13,6 +13,7 @@
 //! - [`qig`]: Bures-Wasserstein distance on density matrices (same metric used here for ellipsoid distance)
 
 use crate::graph::Graph;
+use crate::{Error, Result};
 
 /// Ellipsoidal embedding of a single graph node.
 #[derive(Debug, Clone)]
@@ -21,6 +22,27 @@ pub struct Ellipsoid {
     pub center: Vec<f64>,
     /// `k x k` PSD shape matrix (local structure), stored row-major.
     pub shape: Vec<f64>,
+}
+
+impl Ellipsoid {
+    /// Bures-Wasserstein distance to another ellipsoid.
+    ///
+    /// Convenience wrapper around [`ellipsoid_distance`].
+    pub fn distance(&self, other: &Ellipsoid) -> Result<f64> {
+        ellipsoid_distance(self, other)
+    }
+
+    /// Bhattacharyya overlap coefficient with another ellipsoid.
+    ///
+    /// Convenience wrapper around [`ellipsoid_overlap`].
+    pub fn overlap(&self, other: &Ellipsoid) -> Result<f64> {
+        ellipsoid_overlap(self, other)
+    }
+
+    /// Embedding dimension (length of center vector).
+    pub fn dim(&self) -> usize {
+        self.center.len()
+    }
 }
 
 /// Configuration for ellipsoidal embedding.
@@ -139,11 +161,21 @@ pub fn ellipsoidal_embedding<G: Graph>(graph: &G, config: &EllipsoidalConfig) ->
 ///           - 2\,\operatorname{tr}\bigl((S_1^{1/2} S_2 S_1^{1/2})^{1/2}\bigr)$$
 ///
 /// Returns a non-negative value. Returns 0.0 for identical ellipsoids.
-pub fn ellipsoid_distance(a: &Ellipsoid, b: &Ellipsoid) -> f64 {
+///
+/// # Errors
+///
+/// Returns [`Error::DimensionMismatch`] if center or shape dimensions disagree.
+pub fn ellipsoid_distance(a: &Ellipsoid, b: &Ellipsoid) -> Result<f64> {
     let dim = a.center.len();
-    assert_eq!(dim, b.center.len());
-    assert_eq!(a.shape.len(), dim * dim);
-    assert_eq!(b.shape.len(), dim * dim);
+    if dim != b.center.len() {
+        return Err(Error::DimensionMismatch(dim, b.center.len()));
+    }
+    if a.shape.len() != dim * dim {
+        return Err(Error::DimensionMismatch(a.shape.len(), dim * dim));
+    }
+    if b.shape.len() != dim * dim {
+        return Err(Error::DimensionMismatch(b.shape.len(), dim * dim));
+    }
 
     // ||m1 - m2||^2
     let center_dist_sq: f64 = a
@@ -164,7 +196,7 @@ pub fn ellipsoid_distance(a: &Ellipsoid, b: &Ellipsoid) -> f64 {
     let tr_cross = trace(dim, &sqrt_m);
 
     let w2_sq = center_dist_sq + tr_a + tr_b - 2.0 * tr_cross;
-    w2_sq.max(0.0).sqrt()
+    Ok(w2_sq.max(0.0).sqrt())
 }
 
 /// Bhattacharyya overlap coefficient between two ellipsoids.
@@ -176,11 +208,21 @@ pub fn ellipsoid_distance(a: &Ellipsoid, b: &Ellipsoid) -> f64 {
 ///   \exp\!\Bigl(-\tfrac18\,(m_1-m_2)^T\bigl(\tfrac{S_1+S_2}{2}\bigr)^{-1}(m_1-m_2)\Bigr)$$
 ///
 /// Returns a value in `[0, 1]`. Returns 1.0 for identical ellipsoids.
-pub fn ellipsoid_overlap(a: &Ellipsoid, b: &Ellipsoid) -> f64 {
+///
+/// # Errors
+///
+/// Returns [`Error::DimensionMismatch`] if center or shape dimensions disagree.
+pub fn ellipsoid_overlap(a: &Ellipsoid, b: &Ellipsoid) -> Result<f64> {
     let dim = a.center.len();
-    assert_eq!(dim, b.center.len());
-    assert_eq!(a.shape.len(), dim * dim);
-    assert_eq!(b.shape.len(), dim * dim);
+    if dim != b.center.len() {
+        return Err(Error::DimensionMismatch(dim, b.center.len()));
+    }
+    if a.shape.len() != dim * dim {
+        return Err(Error::DimensionMismatch(a.shape.len(), dim * dim));
+    }
+    if b.shape.len() != dim * dim {
+        return Err(Error::DimensionMismatch(b.shape.len(), dim * dim));
+    }
 
     let eps = 1e-8;
 
@@ -223,7 +265,7 @@ pub fn ellipsoid_overlap(a: &Ellipsoid, b: &Ellipsoid) -> f64 {
     }
 
     let overlap = det_factor * (-mahal / 8.0).exp();
-    overlap.clamp(0.0, 1.0)
+    Ok(overlap.clamp(0.0, 1.0))
 }
 
 // ---------------------------------------------------------------------------
@@ -576,15 +618,15 @@ mod tests {
 
         // Self-distance is 0.
         for e in &embs {
-            let d = ellipsoid_distance(e, e);
+            let d = ellipsoid_distance(e, e).unwrap();
             assert!(d < 1e-6, "self-distance should be ~0, got {d}");
         }
 
         // Symmetry.
         for i in 0..embs.len() {
             for j in (i + 1)..embs.len() {
-                let d1 = ellipsoid_distance(&embs[i], &embs[j]);
-                let d2 = ellipsoid_distance(&embs[j], &embs[i]);
+                let d1 = ellipsoid_distance(&embs[i], &embs[j]).unwrap();
+                let d2 = ellipsoid_distance(&embs[j], &embs[i]).unwrap();
                 assert!(
                     (d1 - d2).abs() < 1e-6,
                     "distance not symmetric: {d1} vs {d2}"
@@ -604,7 +646,7 @@ mod tests {
         let embs = ellipsoidal_embedding(&g, &config);
         for i in 0..embs.len() {
             for j in 0..embs.len() {
-                let d = ellipsoid_distance(&embs[i], &embs[j]);
+                let d = ellipsoid_distance(&embs[i], &embs[j]).unwrap();
                 assert!(d >= -1e-10, "distance should be non-negative, got {d}");
             }
         }
@@ -642,7 +684,7 @@ mod tests {
         };
         let embs = ellipsoidal_embedding(&g, &config);
         for e in &embs {
-            let o = ellipsoid_overlap(e, e);
+            let o = ellipsoid_overlap(e, e).unwrap();
             assert!(
                 (o - 1.0).abs() < 1e-3,
                 "self-overlap should be ~1.0, got {o}"
@@ -660,8 +702,8 @@ mod tests {
         let embs = ellipsoidal_embedding(&g, &config);
         for i in 0..embs.len() {
             for j in (i + 1)..embs.len() {
-                let o1 = ellipsoid_overlap(&embs[i], &embs[j]);
-                let o2 = ellipsoid_overlap(&embs[j], &embs[i]);
+                let o1 = ellipsoid_overlap(&embs[i], &embs[j]).unwrap();
+                let o2 = ellipsoid_overlap(&embs[j], &embs[i]).unwrap();
                 assert!(
                     (o1 - o2).abs() < 1e-8,
                     "overlap not symmetric: {o1} vs {o2}"
@@ -680,7 +722,7 @@ mod tests {
         let embs = ellipsoidal_embedding(&g, &config);
         for i in 0..embs.len() {
             for j in 0..embs.len() {
-                let o = ellipsoid_overlap(&embs[i], &embs[j]);
+                let o = ellipsoid_overlap(&embs[i], &embs[j]).unwrap();
                 assert!(
                     (0.0..=1.0 + 1e-10).contains(&o),
                     "overlap out of range: {o}"
