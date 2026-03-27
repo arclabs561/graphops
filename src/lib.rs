@@ -18,6 +18,7 @@
 
 #[cfg(feature = "petgraph")]
 pub mod betweenness;
+pub mod ellipsoidal;
 pub mod graph;
 pub mod node2vec;
 pub mod pagerank;
@@ -44,6 +45,9 @@ pub use random_walk::{
     generate_walks_ref_parallel, generate_walks_ref_parallel_from_nodes,
 };
 
+pub use ellipsoidal::{
+    ellipsoid_distance, ellipsoid_overlap, ellipsoidal_embedding, Ellipsoid, EllipsoidalConfig,
+};
 pub use pagerank::{pagerank, pagerank_weighted, PageRankConfig};
 pub use pagerank::{pagerank_checked, pagerank_weighted_checked};
 pub use pagerank::{
