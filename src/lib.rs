@@ -18,8 +18,10 @@
 
 #[cfg(feature = "petgraph")]
 pub mod betweenness;
+pub mod centrality;
 pub mod ellipsoidal;
 pub mod graph;
+pub mod louvain;
 pub mod node2vec;
 pub mod pagerank;
 pub mod partition;
@@ -27,6 +29,7 @@ pub mod ppr;
 pub mod random_walk;
 pub mod reachability;
 pub mod topk;
+pub mod triangle;
 
 #[cfg(feature = "petgraph")]
 pub use betweenness::betweenness_centrality;
@@ -45,6 +48,7 @@ pub use random_walk::{
     generate_walks_ref_parallel, generate_walks_ref_parallel_from_nodes,
 };
 
+pub use centrality::{closeness_centrality, harmonic_centrality, hits};
 pub use ellipsoidal::{
     ellipsoid_distance, ellipsoid_overlap, ellipsoidal_embedding, Ellipsoid, EllipsoidalConfig,
 };
@@ -54,7 +58,10 @@ pub use pagerank::{
     pagerank_checked_run, pagerank_run, pagerank_weighted_checked_run, pagerank_weighted_run,
     PageRankRun,
 };
-pub use partition::{connected_components, label_propagation};
+pub use partition::{
+    connected_components, core_numbers, k_core, label_propagation, strongly_connected_components,
+    topological_sort,
+};
 pub use ppr::{personalized_pagerank, personalized_pagerank_checked};
 pub use ppr::{personalized_pagerank_checked_run, personalized_pagerank_run};
 pub use random_walk::{
@@ -65,6 +72,7 @@ pub use random_walk::{
 };
 pub use reachability::reachability_counts_edges;
 pub use topk::{normalize, top_k};
+pub use triangle::{clustering_coefficients, global_clustering_coefficient, triangle_count};
 
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
