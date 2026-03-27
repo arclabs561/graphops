@@ -67,11 +67,14 @@ pub use reachability::reachability_counts_edges;
 pub use topk::{normalize, top_k};
 
 #[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
 pub enum Error {
     #[error("index out of bounds: {0}")]
     IndexOutOfBounds(usize),
     #[error("invalid parameter: {0}")]
     InvalidParameter(String),
+    #[error("dimension mismatch: {0} vs {1}")]
+    DimensionMismatch(usize, usize),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
