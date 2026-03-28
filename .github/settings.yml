@@ -2,7 +2,7 @@
 # https://github.com/repository-settings/app
 
 repository:
-  description: "Graph operators: PageRank/PPR/walks/reachability/node2vec/betweenness."
+  description: "Graph algorithms and node embeddings"
   homepage: "https://docs.rs/graphops"
   private: false
   has_issues: true
