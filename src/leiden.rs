@@ -205,7 +205,6 @@ fn local_move_phase(
 /// Refinement phase: within each community, find connected components and split
 /// disconnected ones into separate communities.
 fn refinement_phase(adj: &[Vec<(usize, f64)>], community: &[usize]) -> Vec<usize> {
-    let n = adj.len();
     let num_communities = *community.iter().max().unwrap_or(&0) + 1;
 
     // Group nodes by community.
