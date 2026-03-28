@@ -19,8 +19,10 @@
 #[cfg(feature = "petgraph")]
 pub mod betweenness;
 pub mod centrality;
+pub mod eigenvector;
 pub mod ellipsoidal;
 pub mod graph;
+pub mod leiden;
 pub mod louvain;
 pub mod node2vec;
 pub mod pagerank;
@@ -28,6 +30,8 @@ pub mod partition;
 pub mod ppr;
 pub mod random_walk;
 pub mod reachability;
+pub mod shortest_path;
+pub mod similarity;
 pub mod topk;
 pub mod triangle;
 
@@ -49,6 +53,10 @@ pub use random_walk::{
 };
 
 pub use centrality::{closeness_centrality, harmonic_centrality, hits};
+pub use eigenvector::{eigenvector_centrality, eigenvector_centrality_run, EigenvectorRun};
+pub use leiden::{leiden, leiden_seeded};
+pub use shortest_path::{bfs_distances, bfs_path, dijkstra_distances};
+pub use similarity::{cosine, jaccard, overlap, top_k_similar_jaccard};
 pub use ellipsoidal::{
     ellipsoid_distance, ellipsoid_overlap, ellipsoidal_embedding, Ellipsoid, EllipsoidalConfig,
 };
