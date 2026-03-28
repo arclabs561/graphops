@@ -4,7 +4,7 @@
 [![Documentation](https://docs.rs/graphops/badge.svg)](https://docs.rs/graphops)
 [![CI](https://github.com/arclabs561/graphops/actions/workflows/ci.yml/badge.svg)](https://github.com/arclabs561/graphops/actions/workflows/ci.yml)
 
-Graph operators and centralities as a small Rust crate. Bring your own graph via the `Graph`/`GraphRef` traits, or use the built-in `AdjacencyMatrix` adapter.
+Graph algorithms and node embeddings.
 
 ```toml
 [dependencies]
