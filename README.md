@@ -30,24 +30,7 @@ assert_eq!(scores.len(), 3);
 
 Weighted PageRank and convergence diagnostics are available via `pagerank_weighted` and `pagerank_run`.
 
-## Personalized PageRank (PPR)
-
-Seed-biased ranking from a set of source nodes:
-
-```rust
-use graphops::{personalized_pagerank, PageRankConfig};
-use graphops::AdjacencyMatrix;
-
-let adj = vec![
-    vec![0.0, 1.0, 0.0],
-    vec![0.0, 0.0, 1.0],
-    vec![1.0, 0.0, 0.0],
-];
-
-// Personalization vector: bias toward node 0
-let pv = vec![1.0, 0.0, 0.0];
-let scores = personalized_pagerank(&AdjacencyMatrix(&adj), PageRankConfig::default(), &pv);
-```
+Personalized PageRank (seed-biased ranking) is available via `personalized_pagerank`.
 
 ## Random walks
 
@@ -129,19 +112,13 @@ let scores = betweenness_centrality(&g);
 
 ## Examples
 
-[**pagerank.rs**](examples/pagerank.rs) -- PageRank on a 4-node directed graph with labeled output. Demonstrates the adapter pattern: define an adjacency matrix, pass it to `pagerank`, and inspect ranked scores. Shows how link structure determines authority (node C, the most linked-to, ranks highest).
-
 ```bash
 cargo run --example pagerank
 ```
 
 ## Feature flags
 
-| Feature | What it adds |
-|---------|-------------|
-| `petgraph` | petgraph adapters + betweenness centrality |
-| `parallel` | Parallel walk generation (via rayon) |
-| `serde` | Serialize/deserialize for graph adapters |
+Optional features: `petgraph` (petgraph adapters + betweenness centrality), `parallel` (rayon walk generation), `serde`.
 
 ## License
 
