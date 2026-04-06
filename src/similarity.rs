@@ -73,18 +73,11 @@ fn count_intersection(a: &[usize], b: &[usize]) -> usize {
         return 0;
     }
 
-    let (smaller, larger) = if a.len() <= b.len() {
-        (a, b)
-    } else {
-        (b, a)
-    };
+    let (smaller, larger) = if a.len() <= b.len() { (a, b) } else { (b, a) };
 
     // For small sets, brute force. For larger, use hash.
     if smaller.len() <= 16 {
-        smaller
-            .iter()
-            .filter(|x| larger.contains(x))
-            .count()
+        smaller.iter().filter(|x| larger.contains(x)).count()
     } else {
         let set: std::collections::HashSet<usize> = smaller.iter().copied().collect();
         larger.iter().filter(|x| set.contains(x)).count()
@@ -153,12 +146,7 @@ mod tests {
     #[test]
     fn top_k_returns_sorted() {
         let g = VecGraph {
-            adj: vec![
-                vec![1, 2, 3],
-                vec![0, 2, 3],
-                vec![0, 1],
-                vec![0, 1],
-            ],
+            adj: vec![vec![1, 2, 3], vec![0, 2, 3], vec![0, 1], vec![0, 1]],
         };
         let top = top_k_similar_jaccard(&g, 0, 2);
         assert!(top.len() <= 2);

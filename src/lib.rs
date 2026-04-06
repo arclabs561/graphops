@@ -54,12 +54,10 @@ pub use random_walk::{
 
 pub use centrality::{closeness_centrality, harmonic_centrality, hits};
 pub use eigenvector::{eigenvector_centrality, eigenvector_centrality_run, EigenvectorRun};
-pub use leiden::{leiden, leiden_seeded};
-pub use shortest_path::{bfs_distances, bfs_path, dijkstra_distances};
-pub use similarity::{cosine, jaccard, overlap, top_k_similar_jaccard};
 pub use ellipsoidal::{
     ellipsoid_distance, ellipsoid_overlap, ellipsoidal_embedding, Ellipsoid, EllipsoidalConfig,
 };
+pub use leiden::{leiden, leiden_seeded};
 pub use pagerank::{pagerank, pagerank_weighted, PageRankConfig};
 pub use pagerank::{pagerank_checked, pagerank_weighted_checked};
 pub use pagerank::{
@@ -79,6 +77,8 @@ pub use random_walk::{
     generate_walks_ref_streaming_from_nodes, sample_start_nodes_reservoir, WalkConfig,
 };
 pub use reachability::reachability_counts_edges;
+pub use shortest_path::{bfs_distances, bfs_path, dijkstra_distances};
+pub use similarity::{cosine, jaccard, overlap, top_k_similar_jaccard};
 pub use topk::{normalize, top_k};
 pub use triangle::{clustering_coefficients, global_clustering_coefficient, triangle_count};
 

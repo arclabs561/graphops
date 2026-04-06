@@ -165,8 +165,7 @@ fn local_move_phase(
 
             let k_u_cu = comm_weights.get(&cu).copied().unwrap_or(0.0);
             let sigma_cu_minus = sigma_tot[cu] - k_u;
-            let remove_gain =
-                k_u_cu / two_m - resolution * k_u * sigma_cu_minus / (two_m * two_m);
+            let remove_gain = k_u_cu / two_m - resolution * k_u * sigma_cu_minus / (two_m * two_m);
 
             let mut best_comm = cu;
             let mut best_gain = 0.0;
@@ -393,17 +392,17 @@ mod tests {
         // Chain with cross-links to create non-trivial partitions.
         let g = VecGraph {
             adj: vec![
-                vec![1, 2],       // 0
-                vec![0, 2, 3],    // 1
-                vec![0, 1],       // 2
-                vec![1, 4],       // 3
-                vec![3, 5, 6],    // 4
-                vec![4, 6, 7],    // 5
-                vec![4, 5],       // 6
-                vec![5, 8],       // 7
-                vec![7, 9, 10],   // 8
-                vec![8, 10],      // 9
-                vec![8, 9],       // 10
+                vec![1, 2],     // 0
+                vec![0, 2, 3],  // 1
+                vec![0, 1],     // 2
+                vec![1, 4],     // 3
+                vec![3, 5, 6],  // 4
+                vec![4, 6, 7],  // 5
+                vec![4, 5],     // 6
+                vec![5, 8],     // 7
+                vec![7, 9, 10], // 8
+                vec![8, 10],    // 9
+                vec![8, 9],     // 10
             ],
         };
         let labels = leiden_seeded(&g, 1.0, 42);

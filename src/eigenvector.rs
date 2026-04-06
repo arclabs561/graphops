@@ -159,13 +159,7 @@ mod tests {
     fn star_center_highest() {
         // Star: node 0 connected to 1,2,3,4
         let g = VecGraph {
-            adj: vec![
-                vec![1, 2, 3, 4],
-                vec![0],
-                vec![0],
-                vec![0],
-                vec![0],
-            ],
+            adj: vec![vec![1, 2, 3, 4], vec![0], vec![0], vec![0], vec![0]],
         };
         let scores = eigenvector_centrality(&g);
         assert!(scores[0] > scores[1]);
@@ -195,12 +189,7 @@ mod tests {
     #[test]
     fn l2_normalized() {
         let g = VecGraph {
-            adj: vec![
-                vec![1, 2, 3],
-                vec![0, 2],
-                vec![0, 1, 3],
-                vec![0, 2],
-            ],
+            adj: vec![vec![1, 2, 3], vec![0, 2], vec![0, 1, 3], vec![0, 2]],
         };
         let scores = eigenvector_centrality(&g);
         let l2: f64 = scores.iter().map(|x| x * x).sum::<f64>().sqrt();
