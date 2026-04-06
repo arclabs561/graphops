@@ -8,7 +8,9 @@
 //! spectral embedding) and subsume-style region embeddings (supervised KG
 //! embedding): both use geometric regions for relational reasoning.
 
-use graphops::ellipsoidal::{ellipsoid_distance, ellipsoid_overlap, ellipsoidal_embedding, EllipsoidalConfig};
+use graphops::ellipsoidal::{
+    ellipsoid_distance, ellipsoid_overlap, ellipsoidal_embedding, EllipsoidalConfig,
+};
 use graphops::Graph;
 
 struct VecGraph {
@@ -16,26 +18,33 @@ struct VecGraph {
 }
 
 impl Graph for VecGraph {
-    fn node_count(&self) -> usize { self.adj.len() }
-    fn neighbors(&self, node: usize) -> Vec<usize> { self.adj[node].clone() }
+    fn node_count(&self) -> usize {
+        self.adj.len()
+    }
+    fn neighbors(&self, node: usize) -> Vec<usize> {
+        self.adj[node].clone()
+    }
 }
 
 fn main() {
     // Karate club-like graph: two dense clusters with a few bridges.
     let adj = vec![
-        vec![1, 2, 3, 4],     // 0: cluster A hub
-        vec![0, 2, 3],        // 1: cluster A
-        vec![0, 1, 3],        // 2: cluster A
-        vec![0, 1, 2, 7],     // 3: cluster A, bridge to B
-        vec![0, 5],           // 4: cluster A, bridge to B
-        vec![4, 6, 7, 8],     // 5: cluster B
-        vec![5, 7, 8],        // 6: cluster B
-        vec![3, 5, 6, 8],     // 7: cluster B hub
-        vec![5, 6, 7],        // 8: cluster B
+        vec![1, 2, 3, 4], // 0: cluster A hub
+        vec![0, 2, 3],    // 1: cluster A
+        vec![0, 1, 3],    // 2: cluster A
+        vec![0, 1, 2, 7], // 3: cluster A, bridge to B
+        vec![0, 5],       // 4: cluster A, bridge to B
+        vec![4, 6, 7, 8], // 5: cluster B
+        vec![5, 7, 8],    // 6: cluster B
+        vec![3, 5, 6, 8], // 7: cluster B hub
+        vec![5, 6, 7],    // 8: cluster B
     ];
     let g = VecGraph { adj };
 
-    let config = EllipsoidalConfig { dim: 3, ..Default::default() };
+    let config = EllipsoidalConfig {
+        dim: 3,
+        ..Default::default()
+    };
     let embeddings = ellipsoidal_embedding(&g, &config);
 
     println!("Ellipsoidal link prediction");
@@ -61,8 +70,7 @@ fn main() {
             if g.adj[i].contains(&j) {
                 continue;
             }
-            let overlap = ellipsoid_overlap(&embeddings[i], &embeddings[j])
-                .unwrap_or(0.0);
+            let overlap = ellipsoid_overlap(&embeddings[i], &embeddings[j]).unwrap_or(0.0);
             predictions.push((i, j, overlap));
         }
     }
@@ -94,10 +102,7 @@ fn main() {
     }
 }
 
-fn pairwise_mean_distance(
-    embeddings: &[graphops::ellipsoidal::Ellipsoid],
-    nodes: &[usize],
-) -> f64 {
+fn pairwise_mean_distance(embeddings: &[graphops::ellipsoidal::Ellipsoid], nodes: &[usize]) -> f64 {
     let mut sum = 0.0;
     let mut count = 0;
     for (i, &a) in nodes.iter().enumerate() {
@@ -106,7 +111,11 @@ fn pairwise_mean_distance(
             count += 1;
         }
     }
-    if count == 0 { 0.0 } else { sum / count as f64 }
+    if count == 0 {
+        0.0
+    } else {
+        sum / count as f64
+    }
 }
 
 fn cross_mean_distance(
@@ -122,5 +131,9 @@ fn cross_mean_distance(
             count += 1;
         }
     }
-    if count == 0 { 0.0 } else { sum / count as f64 }
+    if count == 0 {
+        0.0
+    } else {
+        sum / count as f64
+    }
 }

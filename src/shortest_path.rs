@@ -220,7 +220,12 @@ mod tests {
     fn dijkstra_weighted() {
         let g = WGraph {
             neighbors: vec![vec![1, 2], vec![0, 2], vec![0, 1, 3], vec![2]],
-            weights: vec![vec![1.0, 4.0], vec![1.0, 2.0], vec![4.0, 2.0, 1.0], vec![1.0]],
+            weights: vec![
+                vec![1.0, 4.0],
+                vec![1.0, 2.0],
+                vec![4.0, 2.0, 1.0],
+                vec![1.0],
+            ],
         };
         let d = dijkstra_distances(&g, 0);
         assert_eq!(d[0], Some(0.0));
