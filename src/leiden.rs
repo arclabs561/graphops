@@ -1,7 +1,8 @@
 //! Leiden community detection (Traag, Waltman & van Eck, 2019).
 //!
 //! Improves Louvain with a refinement phase that guarantees all communities
-//! are internally connected. Operates on `GraphRef` (unweighted edges = weight 1.0).
+//! are internally connected. Operates on `GraphRef` (unweighted edges = weight 1.0)
+//! or `WeightedGraph` for edge-weight-aware variants.
 //!
 //! ## Three Phases
 //!
@@ -14,7 +15,7 @@
 //!
 //! O(m) per iteration, typically O(m log n) total. Space O(n + m).
 
-use crate::graph::GraphRef;
+use crate::graph::{GraphRef, WeightedGraph};
 use std::collections::{HashMap, HashSet, VecDeque};
 
 /// Run Leiden community detection with default resolution (1.0).
@@ -112,6 +113,92 @@ pub fn leiden_seeded<G: GraphRef>(graph: &G, resolution: f64, seed: u64) -> Vec<
     }
 
     // Build final labels from node_map.
+    let mut labels = vec![0usize; n];
+    for (comm, members) in node_map.iter().enumerate() {
+        for &orig in members {
+            labels[orig] = comm;
+        }
+    }
+
+    renumber(&mut labels);
+    labels
+}
+
+/// Run Leiden community detection on a weighted graph with default seed (0).
+pub fn leiden_weighted<G: WeightedGraph>(graph: &G, resolution: f64) -> Vec<usize> {
+    leiden_weighted_seeded(graph, resolution, 0)
+}
+
+/// Run Leiden community detection on a weighted graph with explicit seed.
+///
+/// Uses `graph.edge_weight(u, v)` instead of treating all edges as weight 1.0.
+/// All communities are guaranteed to be internally connected.
+pub fn leiden_weighted_seeded<G: WeightedGraph>(
+    graph: &G,
+    resolution: f64,
+    seed: u64,
+) -> Vec<usize> {
+    use rand::{rngs::StdRng, SeedableRng};
+
+    let n = graph.node_count();
+    if n == 0 {
+        return vec![];
+    }
+
+    // Build initial weighted adjacency using actual edge weights.
+    let mut adj: Vec<Vec<(usize, f64)>> = (0..n)
+        .map(|u| {
+            graph
+                .neighbors(u)
+                .into_iter()
+                .filter(|&v| v < n)
+                .map(|v| (v, graph.edge_weight(u, v)))
+                .collect()
+        })
+        .collect();
+
+    let mut node_map: Vec<Vec<usize>> = (0..n).map(|i| vec![i]).collect();
+
+    let mut rng = StdRng::seed_from_u64(seed);
+
+    loop {
+        let cn = adj.len();
+        let (moved, community) = local_move_phase(&adj, resolution, &mut rng);
+
+        if !moved {
+            break;
+        }
+
+        let refined = refinement_phase(&adj, &community);
+
+        let num_communities = *refined.iter().max().unwrap() + 1;
+        if num_communities == cn {
+            break;
+        }
+
+        let mut super_adj: Vec<HashMap<usize, f64>> = vec![HashMap::new(); num_communities];
+        for u in 0..cn {
+            let cu = refined[u];
+            for &(v, w) in &adj[u] {
+                let cv = refined[v];
+                *super_adj[cu].entry(cv).or_insert(0.0) += w;
+            }
+        }
+
+        let new_adj: Vec<Vec<(usize, f64)>> = super_adj
+            .into_iter()
+            .map(|m| m.into_iter().collect())
+            .collect();
+
+        let mut new_node_map: Vec<Vec<usize>> = vec![vec![]; num_communities];
+        for (u, &comm) in refined.iter().enumerate() {
+            new_node_map[comm].extend_from_slice(&node_map[u]);
+        }
+
+        adj = new_adj;
+        node_map = new_node_map;
+    }
+
     let mut labels = vec![0usize; n];
     for (comm, members) in node_map.iter().enumerate() {
         for &orig in members {
@@ -295,7 +382,7 @@ fn renumber(labels: &mut [usize]) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::graph::GraphRef;
+    use crate::graph::{Graph, GraphRef, WeightedGraph};
 
     struct VecGraph {
         adj: Vec<Vec<usize>>,
@@ -307,6 +394,31 @@ mod tests {
         }
         fn neighbors_ref(&self, node: usize) -> &[usize] {
             &self.adj[node]
+        }
+    }
+
+    /// Weighted graph backed by a dense adjacency matrix (0.0 = no edge).
+    struct WeightedVecGraph {
+        weights: Vec<Vec<f64>>,
+    }
+
+    impl Graph for WeightedVecGraph {
+        fn node_count(&self) -> usize {
+            self.weights.len()
+        }
+        fn neighbors(&self, node: usize) -> Vec<usize> {
+            self.weights[node]
+                .iter()
+                .enumerate()
+                .filter(|(_, &w)| w > 0.0)
+                .map(|(i, _)| i)
+                .collect()
+        }
+    }
+
+    impl WeightedGraph for WeightedVecGraph {
+        fn edge_weight(&self, source: usize, target: usize) -> f64 {
+            self.weights[source][target]
         }
     }
 
@@ -442,5 +554,107 @@ mod tests {
                 nodes
             );
         }
+    }
+
+    #[test]
+    fn leiden_weighted_two_cliques_finds_two_communities() {
+        // Two 4-cliques connected by a weak bridge (weight 0.1 vs intra-clique 1.0).
+        // Nodes 0-3 form clique A; nodes 4-7 form clique B; bridge: 3-4 (weight 0.1).
+        let n = 8;
+        let mut w = vec![vec![0.0f64; n]; n];
+        let clique_a = [0, 1, 2, 3];
+        let clique_b = [4, 5, 6, 7];
+        for &u in &clique_a {
+            for &v in &clique_a {
+                if u != v {
+                    w[u][v] = 1.0;
+                }
+            }
+        }
+        for &u in &clique_b {
+            for &v in &clique_b {
+                if u != v {
+                    w[u][v] = 1.0;
+                }
+            }
+        }
+        w[3][4] = 0.1;
+        w[4][3] = 0.1;
+
+        let g = WeightedVecGraph { weights: w };
+        let labels = leiden_weighted_seeded(&g, 1.0, 42);
+        assert_eq!(labels.len(), 8);
+        assert_eq!(labels[0], labels[1]);
+        assert_eq!(labels[0], labels[2]);
+        assert_eq!(labels[0], labels[3]);
+        assert_eq!(labels[4], labels[5]);
+        assert_eq!(labels[4], labels[6]);
+        assert_eq!(labels[4], labels[7]);
+        assert_ne!(labels[0], labels[4]);
+    }
+
+    #[test]
+    fn leiden_weighted_different_weights_can_differ_from_unweighted() {
+        // Verify that edge weights actually affect the output.
+        // Build a graph where unweighted Leiden and weighted Leiden (with asymmetric weights)
+        // can produce different community counts.
+        //
+        // Graph: two triangles (0-1-2 and 3-4-5) joined by edges 2-3 and 0-5 (forming a ring).
+        // Weighted: edges within-triangle = 5.0, cross edges = 0.1.
+        // At resolution=1.0 the weighted variant should separate the triangles.
+        let n = 6;
+        let mut w = vec![vec![0.0f64; n]; n];
+        // Triangle A: 0-1-2
+        for (u, v) in [(0, 1), (1, 2), (0, 2)] {
+            w[u][v] = 5.0;
+            w[v][u] = 5.0;
+        }
+        // Triangle B: 3-4-5
+        for (u, v) in [(3, 4), (4, 5), (3, 5)] {
+            w[u][v] = 5.0;
+            w[v][u] = 5.0;
+        }
+        // Weak cross-edges
+        w[2][3] = 0.1;
+        w[3][2] = 0.1;
+        w[0][5] = 0.1;
+        w[5][0] = 0.1;
+
+        let g = WeightedVecGraph { weights: w };
+        let labels = leiden_weighted_seeded(&g, 1.0, 42);
+        assert_eq!(labels.len(), 6);
+        // Nodes within each triangle must be in the same community.
+        assert_eq!(labels[0], labels[1]);
+        assert_eq!(labels[1], labels[2]);
+        assert_eq!(labels[3], labels[4]);
+        assert_eq!(labels[4], labels[5]);
+        // The two triangles must be in different communities.
+        assert_ne!(labels[0], labels[3]);
+    }
+
+    #[test]
+    fn leiden_weighted_seeded_is_deterministic() {
+        let n = 8;
+        let mut w = vec![vec![0.0f64; n]; n];
+        for u in 0..4usize {
+            for v in 0..4usize {
+                if u != v {
+                    w[u][v] = 1.0;
+                }
+            }
+        }
+        for u in 4..8usize {
+            for v in 4..8usize {
+                if u != v {
+                    w[u][v] = 1.0;
+                }
+            }
+        }
+        w[3][4] = 0.5;
+        w[4][3] = 0.5;
+        let g = WeightedVecGraph { weights: w };
+        let a = leiden_weighted_seeded(&g, 1.0, 77);
+        let b = leiden_weighted_seeded(&g, 1.0, 77);
+        assert_eq!(a, b);
     }
 }

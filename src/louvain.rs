@@ -1,9 +1,10 @@
 //! Louvain community detection (Blondel et al., 2008).
 //!
 //! Greedily optimizes modularity via iterated local moves + graph aggregation.
-//! Operates on `GraphRef` (unweighted edges treated as weight 1.0).
+//! Operates on `GraphRef` (unweighted edges treated as weight 1.0) or
+//! `WeightedGraph` for edge-weight-aware variants.
 
-use crate::graph::GraphRef;
+use crate::graph::{GraphRef, WeightedGraph};
 use std::collections::HashMap;
 
 /// Compute modularity of a given partition on an unweighted graph.
@@ -171,6 +172,93 @@ pub fn louvain_seeded<G: GraphRef>(graph: &G, resolution: f64, seed: u64) -> Vec
     labels
 }
 
+/// Louvain community detection on a weighted graph with default seed (0).
+pub fn louvain_weighted<G: WeightedGraph>(graph: &G, resolution: f64) -> Vec<usize> {
+    louvain_weighted_seeded(graph, resolution, 0)
+}
+
+/// Louvain community detection on a weighted graph with explicit seed.
+///
+/// Uses `graph.edge_weight(u, v)` instead of treating all edges as weight 1.0.
+pub fn louvain_weighted_seeded<G: WeightedGraph>(
+    graph: &G,
+    resolution: f64,
+    seed: u64,
+) -> Vec<usize> {
+    use rand::{rngs::StdRng, SeedableRng};
+
+    let n = graph.node_count();
+    if n == 0 {
+        return vec![];
+    }
+
+    // Build initial weighted adjacency using actual edge weights.
+    let mut adj: Vec<Vec<(usize, f64)>> = (0..n)
+        .map(|u| {
+            graph
+                .neighbors(u)
+                .into_iter()
+                .filter(|&v| v < n)
+                .map(|v| (v, graph.edge_weight(u, v)))
+                .collect()
+        })
+        .collect();
+
+    let mut node_map: Vec<Vec<usize>> = (0..n).map(|i| vec![i]).collect();
+
+    let mut rng = StdRng::seed_from_u64(seed);
+
+    loop {
+        let cn = adj.len();
+        let (moved, community) = local_move_phase(&adj, resolution, &mut rng);
+
+        if !moved {
+            break;
+        }
+
+        let num_communities = *community.iter().max().unwrap() + 1;
+        if num_communities == cn {
+            break;
+        }
+
+        let mut super_adj: Vec<HashMap<usize, f64>> = vec![HashMap::new(); num_communities];
+        for u in 0..cn {
+            let cu = community[u];
+            for &(v, w) in &adj[u] {
+                let cv = community[v];
+                if cu != cv {
+                    *super_adj[cu].entry(cv).or_insert(0.0) += w;
+                } else {
+                    *super_adj[cu].entry(cu).or_insert(0.0) += w;
+                }
+            }
+        }
+
+        let new_adj: Vec<Vec<(usize, f64)>> = super_adj
+            .into_iter()
+            .map(|m| m.into_iter().collect())
+            .collect();
+
+        let mut new_node_map: Vec<Vec<usize>> = vec![vec![]; num_communities];
+        for (u, comm) in community.iter().enumerate() {
+            new_node_map[*comm].extend_from_slice(&node_map[u]);
+        }
+
+        adj = new_adj;
+        node_map = new_node_map;
+    }
+
+    let mut labels = vec![0usize; n];
+    for (comm, members) in node_map.iter().enumerate() {
+        for &orig in members {
+            labels[orig] = comm;
+        }
+    }
+
+    renumber(&mut labels);
+    labels
+}
+
 /// Renumber labels to contiguous 0..k in first-seen order.
 fn renumber(labels: &mut [usize]) {
     let mut map: HashMap<usize, usize> = HashMap::new();
@@ -273,7 +361,7 @@ fn local_move_phase(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::graph::GraphRef;
+    use crate::graph::{Graph, GraphRef, WeightedGraph};
 
     struct VecGraph {
         adj: Vec<Vec<usize>>,
@@ -285,6 +373,31 @@ mod tests {
         }
         fn neighbors_ref(&self, node: usize) -> &[usize] {
             &self.adj[node]
+        }
+    }
+
+    /// Weighted graph backed by a dense adjacency matrix (0.0 = no edge).
+    struct WeightedVecGraph {
+        weights: Vec<Vec<f64>>,
+    }
+
+    impl Graph for WeightedVecGraph {
+        fn node_count(&self) -> usize {
+            self.weights.len()
+        }
+        fn neighbors(&self, node: usize) -> Vec<usize> {
+            self.weights[node]
+                .iter()
+                .enumerate()
+                .filter(|(_, &w)| w > 0.0)
+                .map(|(i, _)| i)
+                .collect()
+        }
+    }
+
+    impl WeightedGraph for WeightedVecGraph {
+        fn edge_weight(&self, source: usize, target: usize) -> f64 {
+            self.weights[source][target]
         }
     }
 
@@ -392,5 +505,97 @@ mod tests {
         unique.sort();
         unique.dedup();
         assert!(unique.len() >= 3);
+    }
+
+    #[test]
+    fn louvain_weighted_two_cliques_finds_two_communities() {
+        // Two 4-cliques (weight 1.0) connected by a weak bridge (weight 0.1).
+        let n = 8;
+        let mut w = vec![vec![0.0f64; n]; n];
+        for u in 0..4usize {
+            for v in 0..4usize {
+                if u != v {
+                    w[u][v] = 1.0;
+                }
+            }
+        }
+        for u in 4..8usize {
+            for v in 4..8usize {
+                if u != v {
+                    w[u][v] = 1.0;
+                }
+            }
+        }
+        w[3][4] = 0.1;
+        w[4][3] = 0.1;
+
+        let g = WeightedVecGraph { weights: w };
+        let labels = louvain_weighted_seeded(&g, 1.0, 42);
+        assert_eq!(labels.len(), 8);
+        assert_eq!(labels[0], labels[1]);
+        assert_eq!(labels[0], labels[2]);
+        assert_eq!(labels[0], labels[3]);
+        assert_eq!(labels[4], labels[5]);
+        assert_eq!(labels[4], labels[6]);
+        assert_eq!(labels[4], labels[7]);
+        assert_ne!(labels[0], labels[4]);
+    }
+
+    #[test]
+    fn louvain_weighted_respects_edge_weights() {
+        // Star graph with 4 leaves split into two pairs.
+        // Pair A (0,1) connected to center (2) with weight 1.0.
+        // Pair B (3,4) connected to center (2) with weight 0.01.
+        // Also: 0-1 edge (weight 1.0), 3-4 edge (weight 1.0).
+        // At high resolution, center should join the heavier pair (A).
+        let n = 5;
+        let mut w = vec![vec![0.0f64; n]; n];
+        w[0][1] = 1.0;
+        w[1][0] = 1.0;
+        w[0][2] = 1.0;
+        w[2][0] = 1.0;
+        w[1][2] = 1.0;
+        w[2][1] = 1.0;
+        w[3][4] = 1.0;
+        w[4][3] = 1.0;
+        w[3][2] = 0.01;
+        w[2][3] = 0.01;
+        w[4][2] = 0.01;
+        w[2][4] = 0.01;
+
+        let g = WeightedVecGraph { weights: w };
+        let labels = louvain_weighted_seeded(&g, 1.0, 42);
+        assert_eq!(labels.len(), 5);
+        // Nodes 0,1,2 should be in same community; 3,4 in another.
+        assert_eq!(labels[0], labels[1]);
+        assert_eq!(labels[0], labels[2]);
+        assert_eq!(labels[3], labels[4]);
+        assert_ne!(labels[0], labels[3]);
+    }
+
+    #[test]
+    fn louvain_weighted_seeded_is_deterministic() {
+        let n = 8;
+        let mut w = vec![vec![0.0f64; n]; n];
+        for u in 0..4usize {
+            for v in 0..4usize {
+                if u != v {
+                    w[u][v] = 1.5;
+                }
+            }
+        }
+        for u in 4..8usize {
+            for v in 4..8usize {
+                if u != v {
+                    w[u][v] = 1.5;
+                }
+            }
+        }
+        w[3][4] = 0.2;
+        w[4][3] = 0.2;
+        let g = WeightedVecGraph { weights: w };
+        let a = louvain_weighted_seeded(&g, 1.0, 77);
+        let b = louvain_weighted_seeded(&g, 1.0, 77);
+        assert_eq!(a, b);
     }
 }

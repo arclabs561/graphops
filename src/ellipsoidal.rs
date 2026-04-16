@@ -125,7 +125,7 @@ pub fn ellipsoidal_embedding<G: Graph>(graph: &G, config: &EllipsoidalConfig) ->
         let mut center = Vec::with_capacity(dim);
         let mut shape = vec![0.0_f64; dim * dim];
 
-        for (_j, &ej) in selected.iter().enumerate() {
+        for &ej in selected.iter() {
             let lam_j = eigenvalues[ej].max(config.regularization);
             let u_jv = eigenvectors[ej * n + v];
             center.push(u_jv / lam_j.sqrt());

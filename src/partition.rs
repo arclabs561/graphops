@@ -353,7 +353,7 @@ pub fn core_numbers<G: GraphRef>(graph: &G) -> Vec<usize> {
         return vec![];
     }
 
-    let mut deg: Vec<usize> = (0..n)
+    let deg: Vec<usize> = (0..n)
         .map(|u| graph.neighbors_ref(u).iter().filter(|&&v| v < n).count())
         .collect();
     let max_deg = deg.iter().copied().max().unwrap_or(0);
@@ -562,7 +562,7 @@ mod tests {
         let order = topological_sort(&g).unwrap();
         assert_eq!(order.len(), 4);
         // Build position map and verify all edges go forward.
-        let mut pos = vec![0usize; 4];
+        let mut pos = [0usize; 4];
         for (i, &node) in order.iter().enumerate() {
             pos[node] = i;
         }
