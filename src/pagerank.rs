@@ -103,7 +103,9 @@ pub fn pagerank_run<G: Graph>(graph: &G, config: PageRankConfig) -> PageRankRun 
     let n_f64 = n as f64;
     let mut scores = vec![1.0 / n_f64; n];
     let mut new_scores = vec![0.0; n];
-    let out_degrees: Vec<usize> = (0..n).map(|i| graph.out_degree(i)).collect();
+    // Precompute neighbor lists once to avoid per-iteration allocation.
+    let neighbors: Vec<Vec<usize>> = (0..n).map(|u| graph.neighbors(u)).collect();
+    let out_degrees: Vec<usize> = neighbors.iter().map(|nb| nb.len()).collect();
 
     let mut iters = 0usize;
     let mut last_diff = f64::INFINITY;
@@ -124,7 +126,7 @@ pub fn pagerank_run<G: Graph>(graph: &G, config: PageRankConfig) -> PageRankRun 
             let deg = out_degrees[u];
             if deg > 0 {
                 let share = config.damping * scores[u] / deg as f64;
-                for v in graph.neighbors(u) {
+                for &v in &neighbors[u] {
                     new_scores[v] += share;
                 }
             }
