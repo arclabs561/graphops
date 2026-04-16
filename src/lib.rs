@@ -65,7 +65,8 @@ pub use graph_kernel::{
     random_walk_kernel, sliced_wasserstein_graph_kernel, structural_node_features,
     wl_subtree_kernel,
 };
-pub use leiden::{leiden, leiden_seeded};
+pub use leiden::{leiden, leiden_seeded, leiden_weighted, leiden_weighted_seeded};
+pub use louvain::{louvain, louvain_seeded, louvain_weighted, louvain_weighted_seeded};
 pub use pagerank::{pagerank, pagerank_weighted, PageRankConfig};
 pub use pagerank::{pagerank_checked, pagerank_weighted_checked};
 pub use pagerank::{
