@@ -37,6 +37,8 @@ pub mod triangle;
 
 #[cfg(feature = "petgraph")]
 pub use betweenness::betweenness_centrality;
+#[cfg(feature = "petgraph")]
+pub use graph::PetgraphRef;
 pub use graph::{AdjacencyMatrix, Graph, GraphRef, WeightedGraph, WeightedGraphRef};
 pub use node2vec::{
     generate_biased_walks_precomp_ref, generate_biased_walks_precomp_ref_from_nodes,

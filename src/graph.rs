@@ -82,6 +82,45 @@ where
     }
 }
 
+/// Pre-built adjacency list adapter for petgraph graphs.
+/// Converts a petgraph graph into a structure implementing `GraphRef`
+/// by pre-computing neighbor lists.
+#[cfg(feature = "petgraph")]
+pub struct PetgraphRef {
+    neighbors: Vec<Vec<usize>>,
+}
+
+#[cfg(feature = "petgraph")]
+impl PetgraphRef {
+    /// Build from any petgraph graph type.
+    pub fn from_graph<N, E, Ty, Ix>(graph: &petgraph::Graph<N, E, Ty, Ix>) -> Self
+    where
+        Ty: petgraph::EdgeType,
+        Ix: petgraph::graph::IndexType,
+    {
+        let n = graph.node_count();
+        let neighbors: Vec<Vec<usize>> = (0..n)
+            .map(|i| {
+                graph
+                    .neighbors(petgraph::graph::NodeIndex::new(i))
+                    .map(|idx| idx.index())
+                    .collect()
+            })
+            .collect();
+        Self { neighbors }
+    }
+}
+
+#[cfg(feature = "petgraph")]
+impl GraphRef for PetgraphRef {
+    fn node_count(&self) -> usize {
+        self.neighbors.len()
+    }
+    fn neighbors_ref(&self, node: usize) -> &[usize] {
+        &self.neighbors[node]
+    }
+}
+
 #[cfg(feature = "petgraph")]
 impl<N, Ty, Ix> WeightedGraph for petgraph::Graph<N, f64, Ty, Ix>
 where
