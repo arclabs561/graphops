@@ -61,6 +61,10 @@ pub use eigenvector::{eigenvector_centrality, eigenvector_centrality_run, Eigenv
 pub use ellipsoidal::{
     ellipsoid_distance, ellipsoid_overlap, ellipsoidal_embedding, Ellipsoid, EllipsoidalConfig,
 };
+pub use graph_kernel::{
+    random_walk_kernel, sliced_wasserstein_graph_kernel, structural_node_features,
+    wl_subtree_kernel,
+};
 pub use leiden::{leiden, leiden_seeded};
 pub use pagerank::{pagerank, pagerank_weighted, PageRankConfig};
 pub use pagerank::{pagerank_checked, pagerank_weighted_checked};
@@ -85,10 +89,6 @@ pub use shortest_path::{bfs_distances, bfs_path, dijkstra_distances};
 pub use similarity::{cosine, jaccard, overlap, top_k_similar_jaccard};
 pub use topk::{normalize, top_k};
 pub use triangle::{clustering_coefficients, global_clustering_coefficient, triangle_count};
-pub use graph_kernel::{
-    random_walk_kernel, sliced_wasserstein_graph_kernel, structural_node_features,
-    wl_subtree_kernel,
-};
 
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
