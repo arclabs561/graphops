@@ -22,6 +22,8 @@ pub mod centrality;
 pub mod eigenvector;
 pub mod ellipsoidal;
 pub mod graph;
+/// Graph kernels: WL subtree, random walk, and sliced Wasserstein.
+pub mod graph_kernel;
 pub mod leiden;
 pub mod louvain;
 pub mod node2vec;
@@ -83,6 +85,10 @@ pub use shortest_path::{bfs_distances, bfs_path, dijkstra_distances};
 pub use similarity::{cosine, jaccard, overlap, top_k_similar_jaccard};
 pub use topk::{normalize, top_k};
 pub use triangle::{clustering_coefficients, global_clustering_coefficient, triangle_count};
+pub use graph_kernel::{
+    random_walk_kernel, sliced_wasserstein_graph_kernel, structural_node_features,
+    wl_subtree_kernel,
+};
 
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
