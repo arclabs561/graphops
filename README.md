@@ -4,11 +4,13 @@
 [![Documentation](https://docs.rs/graphops/badge.svg)](https://docs.rs/graphops)
 [![CI](https://github.com/arclabs561/graphops/actions/workflows/ci.yml/badge.svg)](https://github.com/arclabs561/graphops/actions/workflows/ci.yml)
 
-Graph algorithms and node embeddings.
+Graph algorithms and node embeddings. Implements PageRank, Louvain/Leiden
+community detection, random walks (uniform and node2vec-style), reachability,
+betweenness centrality, ellipsoidal embeddings, and graph kernels.
 
 ```toml
 [dependencies]
-graphops = "0.1.0"
+graphops = "0.1.4"
 ```
 
 ## PageRank
@@ -112,8 +114,17 @@ let scores = betweenness_centrality(&g);
 
 ## Examples
 
+| Example | What it shows |
+|---------|---------------|
+| `pagerank` | PageRank on a small directed graph |
+| `community_detection` | Louvain and Leiden community detection on a two-cluster graph |
+| `random_walks` | Uniform and node2vec-style biased random walks |
+| `ellipsoidal_link_prediction` | Ellipsoidal embeddings for link prediction |
+
 ```bash
 cargo run --example pagerank
+cargo run --example community_detection
+cargo run --example random_walks
 ```
 
 ## Feature flags
