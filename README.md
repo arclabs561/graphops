@@ -4,9 +4,7 @@
 [![Documentation](https://docs.rs/graphops/badge.svg)](https://docs.rs/graphops)
 [![CI](https://github.com/arclabs561/graphops/actions/workflows/ci.yml/badge.svg)](https://github.com/arclabs561/graphops/actions/workflows/ci.yml)
 
-Graph algorithms and node embeddings. Implements PageRank, Louvain/Leiden
-community detection, random walks (uniform and node2vec-style), reachability,
-betweenness centrality, ellipsoidal embeddings, and graph kernels.
+Graph algorithms and node embeddings.
 
 ```toml
 [dependencies]
