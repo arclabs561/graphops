@@ -23,7 +23,7 @@ pub fn closeness_centrality<G: Graph>(graph: &G) -> Vec<f64> {
         return scores;
     }
 
-    for v in 0..n {
+    for (v, score) in scores.iter_mut().enumerate() {
         let dist = bfs_distances(graph, v);
         let mut total_dist = 0u64;
         let mut reachable = 0usize;
@@ -39,7 +39,7 @@ pub fn closeness_centrality<G: Graph>(graph: &G) -> Vec<f64> {
             let avg = total_dist as f64 / reachable as f64;
             // Wasserman-Faust normalization for disconnected graphs.
             let norm = reachable as f64 / (n - 1) as f64;
-            scores[v] = norm / avg;
+            *score = norm / avg;
         }
     }
     scores
@@ -60,7 +60,7 @@ pub fn harmonic_centrality<G: Graph>(graph: &G) -> Vec<f64> {
         return scores;
     }
 
-    for v in 0..n {
+    for (v, score) in scores.iter_mut().enumerate() {
         let dist = bfs_distances(graph, v);
         let mut sum_inv = 0.0f64;
         for (u, &d) in dist.iter().enumerate() {
@@ -72,7 +72,7 @@ pub fn harmonic_centrality<G: Graph>(graph: &G) -> Vec<f64> {
                 }
             }
         }
-        scores[v] = sum_inv / (n - 1) as f64;
+        *score = sum_inv / (n - 1) as f64;
     }
     scores
 }
@@ -143,10 +143,10 @@ pub fn hits<G: Graph>(graph: &G, max_iter: usize, tol: f64) -> (Vec<f64>, Vec<f6
 
         // Hub update: hub[u] = sum of auth[v] for v in out-neighbors of u.
         let mut new_hub = vec![0.0f64; n];
-        for u in 0..n {
+        for (u, hub_u) in new_hub.iter_mut().enumerate() {
             for v in graph.neighbors(u) {
                 if v < n {
-                    new_hub[u] += new_auth[v];
+                    *hub_u += new_auth[v];
                 }
             }
         }

@@ -188,6 +188,7 @@ pub fn global_clustering_coefficient<G: Graph>(graph: &G) -> f64 {
 }
 
 #[cfg(test)]
+#[allow(clippy::needless_range_loop)]
 mod tests {
     use super::*;
 

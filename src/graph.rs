@@ -1,8 +1,12 @@
 //! Minimal graph adapter traits.
 
+/// Owned-`Vec` graph adapter: the simplest adapter, allocates per neighbor query.
 pub trait Graph {
+    /// Number of nodes in the graph.
     fn node_count(&self) -> usize;
+    /// Out-neighbors of `node` as an owned `Vec` of node ids.
     fn neighbors(&self, node: usize) -> Vec<usize>;
+    /// Number of out-neighbors of `node`.
     fn out_degree(&self, node: usize) -> usize {
         self.neighbors(node).len()
     }
@@ -13,14 +17,19 @@ pub trait Graph {
 /// This is the “cache-friendly” adapter: it avoids allocating a new `Vec`
 /// on every step of a random walk.
 pub trait GraphRef {
+    /// Number of nodes in the graph.
     fn node_count(&self) -> usize;
+    /// Out-neighbors of `node` as a borrowed slice.
     fn neighbors_ref(&self, node: usize) -> &[usize];
+    /// Number of out-neighbors of `node`.
     fn out_degree(&self, node: usize) -> usize {
         self.neighbors_ref(node).len()
     }
 }
 
+/// Graph with scalar edge weights.
 pub trait WeightedGraph: Graph {
+    /// Weight of the edge `(source, target)`; returns `0.0` when the edge is absent.
     fn edge_weight(&self, source: usize, target: usize) -> f64;
 }
 
@@ -30,6 +39,7 @@ pub trait WeightedGraph: Graph {
 /// a node has a contiguous neighbor list and a contiguous weight list,
 /// with matching indices.
 pub trait WeightedGraphRef {
+    /// Number of nodes in the graph.
     fn node_count(&self) -> usize;
 
     /// Return `(neighbors, weights)` for a node.
@@ -39,11 +49,14 @@ pub trait WeightedGraphRef {
     /// - Weights should be non-negative for node2vec/node2vec+ semantics.
     fn neighbors_and_weights_ref(&self, node: usize) -> (&[usize], &[f32]);
 
+    /// Number of out-neighbors of `node`.
     fn out_degree(&self, node: usize) -> usize {
         self.neighbors_and_weights_ref(node).0.len()
     }
 }
 
+/// Row-major adjacency-matrix adapter. Entry `(i, j)` is the weight of edge `i -> j`;
+/// zero means no edge.
 pub struct AdjacencyMatrix<'a>(pub &'a [Vec<f64>]);
 
 impl<'a> Graph for AdjacencyMatrix<'a> {

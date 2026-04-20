@@ -59,12 +59,15 @@ fn main() {
         p: 1.0,
         q: 0.5, // bias toward exploring new neighborhoods
         seed: 42,
-        ..WalkConfig::default()
     };
     let biased_walks = generate_biased_walks(&g, biased_config);
 
     println!("\n=== Biased walks (node2vec: p=1.0, q=0.5) ===");
-    println!("{} walks, length {}\n", biased_walks.len(), biased_config.length);
+    println!(
+        "{} walks, length {}\n",
+        biased_walks.len(),
+        biased_config.length
+    );
     for (i, walk) in biased_walks.iter().take(6).enumerate() {
         println!("  Walk {} from node {}: {:?}", i, walk[0], walk);
     }

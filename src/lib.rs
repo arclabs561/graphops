@@ -91,15 +91,20 @@ pub use similarity::{cosine, jaccard, overlap, top_k_similar_jaccard};
 pub use topk::{normalize, top_k};
 pub use triangle::{clustering_coefficients, global_clustering_coefficient, triangle_count};
 
+/// Errors returned by the `*_checked` variants of graph operators.
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum Error {
+    /// A node id was outside `0..node_count()`.
     #[error("index out of bounds: {0}")]
     IndexOutOfBounds(usize),
+    /// A config value violated the operator's preconditions.
     #[error("invalid parameter: {0}")]
     InvalidParameter(String),
+    /// Two slices that should agree in length did not.
     #[error("dimension mismatch: {0} vs {1}")]
     DimensionMismatch(usize, usize),
 }
 
+/// Alias for `std::result::Result<T, Error>`.
 pub type Result<T> = std::result::Result<T, Error>;

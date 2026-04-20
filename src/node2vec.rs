@@ -39,6 +39,7 @@ impl Default for WeightedNode2VecPlusConfig {
     }
 }
 
+/// Weighted node2vec biased walks over a `WeightedGraphRef`.
 pub fn generate_biased_walks_weighted_ref<G: WeightedGraphRef>(
     graph: &G,
     config: WeightedNode2VecPlusConfig,
@@ -46,6 +47,7 @@ pub fn generate_biased_walks_weighted_ref<G: WeightedGraphRef>(
     generate_biased_walks_weighted_impl(graph, config, false)
 }
 
+/// Weighted node2vec+ biased walks over a `WeightedGraphRef`.
 pub fn generate_biased_walks_weighted_plus_ref<G: WeightedGraphRef>(
     graph: &G,
     config: WeightedNode2VecPlusConfig,
@@ -318,6 +320,8 @@ pub struct PrecomputedBiasedWalks {
 }
 
 impl PrecomputedBiasedWalks {
+    /// Precompute the alias tables needed for node2vec walks with return bias `p`
+    /// and in-out bias `q`.
     pub fn new<G: GraphRef>(graph: &G, p: f32, q: f32) -> Self {
         let n = graph.node_count();
         let mut neighbors: Vec<Vec<usize>> = Vec::with_capacity(n);
@@ -393,6 +397,8 @@ impl PrecomputedBiasedWalks {
     }
 }
 
+/// Generate node2vec biased walks using precomputed alias tables (`PrecomputedBiasedWalks`),
+/// amortizing the per-step sampling cost across multiple walks over the same graph.
 pub fn generate_biased_walks_precomp_ref(
     pre: &PrecomputedBiasedWalks,
     config: crate::random_walk::WalkConfig,
