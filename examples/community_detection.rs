@@ -53,7 +53,10 @@ fn main() {
         ],
     };
 
-    println!("Graph: {} nodes, two clusters connected by node 3 <-> 5\n", g.node_count());
+    println!(
+        "Graph: {} nodes, two clusters connected by node 3 <-> 5\n",
+        g.node_count()
+    );
 
     let louvain = louvain_seeded(&g, 1.0, 42);
     println!("Louvain communities: {:?}", louvain);

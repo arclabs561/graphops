@@ -3,20 +3,29 @@
 use crate::graph::{Graph, WeightedGraph};
 use crate::{Error, Result};
 
+/// Result of a PageRank run: scores plus convergence diagnostics.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct PageRankRun {
+    /// PageRank score per node, indexed by node id.
     pub scores: Vec<f64>,
+    /// Number of power-iteration steps executed.
     pub iterations: usize,
+    /// L1 norm of the score delta at the final iteration.
     pub diff_l1: f64,
+    /// Whether the run converged within `max_iterations`.
     pub converged: bool,
 }
 
+/// PageRank hyperparameters.
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct PageRankConfig {
+    /// Damping factor `alpha` (probability of following an edge at each step).
     pub damping: f64,
+    /// Maximum power-iteration steps before giving up.
     pub max_iterations: usize,
+    /// Convergence tolerance on the L1 delta between iterations.
     pub tolerance: f64,
 }
 
@@ -31,6 +40,7 @@ impl Default for PageRankConfig {
 }
 
 impl PageRankConfig {
+    /// Validate hyperparameters; returns `Error::InvalidParameter` on failure.
     pub fn validate(&self) -> Result<()> {
         if !self.damping.is_finite() {
             return Err(Error::InvalidParameter(
@@ -168,6 +178,7 @@ pub fn pagerank_weighted<G: WeightedGraph>(graph: &G, config: PageRankConfig) ->
     pagerank_weighted_run(graph, config).scores
 }
 
+/// `pagerank_weighted` with full run diagnostics (`PageRankRun`).
 pub fn pagerank_weighted_run<G: WeightedGraph>(graph: &G, config: PageRankConfig) -> PageRankRun {
     let n = graph.node_count();
     if n == 0 {
@@ -271,11 +282,13 @@ pub fn pagerank_weighted_checked<G: WeightedGraph>(
     Ok(pagerank_weighted(graph, config))
 }
 
+/// `pagerank_checked` with full run diagnostics.
 pub fn pagerank_checked_run<G: Graph>(graph: &G, config: PageRankConfig) -> Result<PageRankRun> {
     config.validate()?;
     Ok(pagerank_run(graph, config))
 }
 
+/// `pagerank_weighted_checked` with full run diagnostics.
 pub fn pagerank_weighted_checked_run<G: WeightedGraph>(
     graph: &G,
     config: PageRankConfig,

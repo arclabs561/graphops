@@ -4,13 +4,19 @@ use crate::graph::{Graph, GraphRef};
 use rand::prelude::*;
 use rand_chacha::ChaCha8Rng;
 
+/// Random walk hyperparameters. `p` and `q` are the node2vec return / in-out bias.
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct WalkConfig {
+    /// Steps per walk.
     pub length: usize,
+    /// Walks initiated per node.
     pub walks_per_node: usize,
+    /// node2vec return parameter.
     pub p: f32,
+    /// node2vec in-out parameter.
     pub q: f32,
+    /// RNG seed for reproducibility.
     pub seed: u64,
 }
 
@@ -67,6 +73,7 @@ pub fn sample_start_nodes_reservoir(node_count: usize, k: usize, seed: u64) -> V
     reservoir
 }
 
+/// Generate unbiased (first-order) random walks starting from every node.
 pub fn generate_walks<G: Graph>(graph: &G, config: WalkConfig) -> Vec<Vec<usize>> {
     let start_nodes: Vec<usize> = (0..graph.node_count()).collect();
     generate_walks_from_nodes(graph, &start_nodes, config)
@@ -220,6 +227,7 @@ fn unbiased_walk_ref_into<G: GraphRef, R: Rng>(
     }
 }
 
+/// Generate node2vec biased (second-order) random walks starting from every node.
 pub fn generate_biased_walks<G: Graph>(graph: &G, config: WalkConfig) -> Vec<Vec<usize>> {
     let start_nodes: Vec<usize> = (0..graph.node_count()).collect();
     generate_biased_walks_from_nodes(graph, &start_nodes, config)
