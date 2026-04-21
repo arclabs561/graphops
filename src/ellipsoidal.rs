@@ -9,8 +9,8 @@
 //! "Ellipsoidal Embeddings of Graphs", SIAM J. Math. Data Sci.
 //!
 //! # Related crates
-//! - [`subsume`]: Gaussian and density matrix embeddings for supervised concept embeddings (learned from training triples)
-//! - [`qig`]: Bures-Wasserstein distance on density matrices (same metric used here for ellipsoid distance)
+//! - `subsume`: Gaussian and density matrix embeddings for supervised concept embeddings (learned from training triples)
+//! - `qig`: Bures-Wasserstein distance on density matrices (same metric used here for ellipsoid distance)
 
 use crate::graph::Graph;
 use crate::{Error, Result};
