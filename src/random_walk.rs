@@ -4,19 +4,29 @@ use crate::graph::{Graph, GraphRef};
 use rand::prelude::*;
 use rand_chacha::ChaCha8Rng;
 
-/// Random walk hyperparameters. `p` and `q` are the node2vec return / in-out bias.
+/// Random-walk generation hyperparameters.
+///
+/// Used by both [`generate_walks`] (unbiased, first-order) and
+/// [`generate_biased_walks`] (node2vec, second-order). The `p` and `q` fields
+/// are only read by the biased variants; they're ignored by first-order walks.
+///
+/// Defaults match node2vec paper conventions: `length = 80`, `walks_per_node = 10`,
+/// `p = q = 1.0` (no bias).
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct WalkConfig {
-    /// Steps per walk.
+    /// Steps per walk. Typical values: 40–100.
     pub length: usize,
-    /// Walks initiated per node.
+    /// Walks initiated from each start node. Typical values: 10–80.
     pub walks_per_node: usize,
-    /// node2vec return parameter.
+    /// node2vec return parameter. `p < 1` biases walks toward revisiting
+    /// the previous node (local exploration); `p > 1` discourages returning.
     pub p: f32,
-    /// node2vec in-out parameter.
+    /// node2vec in-out parameter. `q < 1` biases walks outward (DFS-like);
+    /// `q > 1` keeps walks close to the origin (BFS-like).
     pub q: f32,
-    /// RNG seed for reproducibility.
+    /// Seed for the deterministic RNG. Same seed + same graph + same config
+    /// always produces identical walks.
     pub seed: u64,
 }
 
@@ -74,6 +84,23 @@ pub fn sample_start_nodes_reservoir(node_count: usize, k: usize, seed: u64) -> V
 }
 
 /// Generate unbiased (first-order) random walks starting from every node.
+///
+/// Each start node produces `config.walks_per_node` walks of length
+/// `config.length`. The next step chooses uniformly among out-neighbors
+/// (first-order Markov). Returns a flat `Vec<Vec<usize>>` of all walks,
+/// concatenated in node-order.
+///
+/// `config.p` and `config.q` are ignored — they only affect biased walks.
+///
+/// # Example
+///
+/// ```
+/// use graphops::{generate_walks, AdjacencyMatrix, WalkConfig};
+///
+/// let m = vec![vec![0.0, 1.0, 0.0], vec![0.0, 0.0, 1.0], vec![1.0, 0.0, 0.0]];
+/// let walks = generate_walks(&AdjacencyMatrix(&m), WalkConfig { length: 5, walks_per_node: 2, ..Default::default() });
+/// assert_eq!(walks.len(), 6); // 3 nodes * 2 walks each
+/// ```
 pub fn generate_walks<G: Graph>(graph: &G, config: WalkConfig) -> Vec<Vec<usize>> {
     let start_nodes: Vec<usize> = (0..graph.node_count()).collect();
     generate_walks_from_nodes(graph, &start_nodes, config)
@@ -228,6 +255,16 @@ fn unbiased_walk_ref_into<G: GraphRef, R: Rng>(
 }
 
 /// Generate node2vec biased (second-order) random walks starting from every node.
+///
+/// Transition probabilities depend on both the current node and the previous
+/// step (the "second-order" part): returning to the previous node gets weight
+/// `1/p`, staying at the same distance (BFS-like) gets weight `1`, moving
+/// farther (DFS-like) gets weight `1/q`. These are then renormalized among
+/// actual out-neighbors.
+///
+/// For repeated walks on the same graph, prefer
+/// [`crate::node2vec::generate_biased_walks_precomp_ref`] which amortizes the
+/// alias-table construction across runs.
 pub fn generate_biased_walks<G: Graph>(graph: &G, config: WalkConfig) -> Vec<Vec<usize>> {
     let start_nodes: Vec<usize> = (0..graph.node_count()).collect();
     generate_biased_walks_from_nodes(graph, &start_nodes, config)

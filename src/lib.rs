@@ -92,19 +92,28 @@ pub use topk::{normalize, top_k};
 pub use triangle::{clustering_coefficients, global_clustering_coefficient, triangle_count};
 
 /// Errors returned by the `*_checked` variants of graph operators.
+///
+/// The non-checked variants (`pagerank`, `personalized_pagerank`, etc.) panic
+/// or clamp to defensible defaults on invalid input. The `*_checked` variants
+/// return this error type so callers can distinguish input-validation
+/// failures from operator-internal issues. Marked `#[non_exhaustive]` so new
+/// variants can be added without a semver break.
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum Error {
-    /// A node id was outside `0..node_count()`.
+    /// A node id was outside `0..node_count()` — typically from a user-supplied
+    /// personalization vector or seed set.
     #[error("index out of bounds: {0}")]
     IndexOutOfBounds(usize),
-    /// A config value violated the operator's preconditions.
+    /// A configuration value violated the operator's preconditions. The string
+    /// names the offending parameter (e.g. `"damping must be in [0, 1]"`).
     #[error("invalid parameter: {0}")]
     InvalidParameter(String),
-    /// Two slices that should agree in length did not.
+    /// Two slices that should agree in length did not. The pair is
+    /// `(actual, expected)`.
     #[error("dimension mismatch: {0} vs {1}")]
     DimensionMismatch(usize, usize),
 }
 
-/// Alias for `std::result::Result<T, Error>`.
+/// Shorthand for `std::result::Result<T, Error>`.
 pub type Result<T> = std::result::Result<T, Error>;

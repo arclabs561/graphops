@@ -1,31 +1,50 @@
-//! PageRank centrality.
+//! PageRank centrality (power iteration on a random-surfer Markov chain).
 
 use crate::graph::{Graph, WeightedGraph};
 use crate::{Error, Result};
 
 /// Result of a PageRank run: scores plus convergence diagnostics.
+///
+/// The `*_run` variants (`pagerank_run`, `pagerank_weighted_run`,
+/// `personalized_pagerank_run`) return this struct; the shorter variants
+/// (`pagerank`, etc.) discard the diagnostics and return only `scores`.
+///
+/// Use the diagnostic fields when tuning `max_iterations` / `tolerance` or
+/// when bench-marking convergence across graphs of different sizes.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct PageRankRun {
-    /// PageRank score per node, indexed by node id.
+    /// PageRank score per node, indexed by node id. Sums to approximately
+    /// `1.0` modulo floating-point and dangling-node redistribution.
     pub scores: Vec<f64>,
-    /// Number of power-iteration steps executed.
+    /// Number of power-iteration steps executed. Equal to
+    /// `config.max_iterations` when `converged == false`.
     pub iterations: usize,
-    /// L1 norm of the score delta at the final iteration.
+    /// L1 norm of the score delta at the final iteration. Compare against
+    /// `config.tolerance` to see how close we were to converging.
     pub diff_l1: f64,
-    /// Whether the run converged within `max_iterations`.
+    /// Whether the run converged (`diff_l1 < config.tolerance`) before hitting
+    /// `config.max_iterations`.
     pub converged: bool,
 }
 
 /// PageRank hyperparameters.
+///
+/// Defaults match the Brin–Page 1998 paper: `damping = 0.85`,
+/// `max_iterations = 100`, `tolerance = 1e-6`. For high-precision downstream
+/// work (personalized PageRank as a similarity metric) drop tolerance to
+/// `1e-9` and bump iterations to `500`.
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct PageRankConfig {
-    /// Damping factor `alpha` (probability of following an edge at each step).
+    /// Damping factor `alpha` in `[0, 1]`: the probability of following an
+    /// edge at each step (vs teleporting uniformly). Classical value is `0.85`.
     pub damping: f64,
-    /// Maximum power-iteration steps before giving up.
+    /// Maximum power-iteration steps before giving up. The run returns
+    /// with `converged = false` if the L1 delta is still above `tolerance`.
     pub max_iterations: usize,
-    /// Convergence tolerance on the L1 delta between iterations.
+    /// Convergence threshold on the L1 norm of the score delta between
+    /// consecutive iterations. Lower = tighter convergence, more iterations.
     pub tolerance: f64,
 }
 
@@ -178,7 +197,11 @@ pub fn pagerank_weighted<G: WeightedGraph>(graph: &G, config: PageRankConfig) ->
     pagerank_weighted_run(graph, config).scores
 }
 
-/// `pagerank_weighted` with full run diagnostics (`PageRankRun`).
+/// Like [`pagerank_weighted`] but returns full [`PageRankRun`] diagnostics.
+///
+/// Prefer this when you need to know whether the run converged
+/// (`result.converged`) or how close it got (`result.diff_l1`). The scalar
+/// `pagerank_weighted` wrapper discards everything but `scores`.
 pub fn pagerank_weighted_run<G: WeightedGraph>(graph: &G, config: PageRankConfig) -> PageRankRun {
     let n = graph.node_count();
     if n == 0 {
@@ -282,13 +305,16 @@ pub fn pagerank_weighted_checked<G: WeightedGraph>(
     Ok(pagerank_weighted(graph, config))
 }
 
-/// `pagerank_checked` with full run diagnostics.
+/// Validated PageRank with full diagnostics. Errors on invalid `config` and
+/// returns a [`PageRankRun`] on success. Equivalent to calling
+/// [`PageRankConfig::validate`] then [`pagerank_run`].
 pub fn pagerank_checked_run<G: Graph>(graph: &G, config: PageRankConfig) -> Result<PageRankRun> {
     config.validate()?;
     Ok(pagerank_run(graph, config))
 }
 
-/// `pagerank_weighted_checked` with full run diagnostics.
+/// Validated weighted PageRank with full diagnostics. Errors on invalid config,
+/// NaN weights, or negative weights. Returns a [`PageRankRun`] on success.
 pub fn pagerank_weighted_checked_run<G: WeightedGraph>(
     graph: &G,
     config: PageRankConfig,

@@ -39,7 +39,13 @@ impl Default for WeightedNode2VecPlusConfig {
     }
 }
 
-/// Weighted node2vec biased walks over a `WeightedGraphRef`.
+/// Weighted node2vec biased walks over a [`WeightedGraphRef`].
+///
+/// Identical semantics to [`crate::random_walk::generate_biased_walks`] but
+/// with edge weights scaling the per-neighbor transition probabilities before
+/// the p/q bias is applied. Use when your graph has meaningful edge weights
+/// (frequencies, similarities, capacities) — unweighted walks treat every
+/// neighbor equally.
 pub fn generate_biased_walks_weighted_ref<G: WeightedGraphRef>(
     graph: &G,
     config: WeightedNode2VecPlusConfig,
@@ -47,7 +53,12 @@ pub fn generate_biased_walks_weighted_ref<G: WeightedGraphRef>(
     generate_biased_walks_weighted_impl(graph, config, false)
 }
 
-/// Weighted node2vec+ biased walks over a `WeightedGraphRef`.
+/// Weighted node2vec+ biased walks over a [`WeightedGraphRef`].
+///
+/// node2vec+ (Liu et al., 2022) is a node2vec variant that fixes the "noisy
+/// edge" problem: standard node2vec's BFS/DFS bias (p, q) can be drowned out
+/// by weight variance in real-world weighted graphs. node2vec+ reweights
+/// neighbor selection to make the bias robust under weighted settings.
 pub fn generate_biased_walks_weighted_plus_ref<G: WeightedGraphRef>(
     graph: &G,
     config: WeightedNode2VecPlusConfig,
@@ -320,8 +331,13 @@ pub struct PrecomputedBiasedWalks {
 }
 
 impl PrecomputedBiasedWalks {
-    /// Precompute the alias tables needed for node2vec walks with return bias `p`
+    /// Precompute the alias tables for node2vec walks with return bias `p`
     /// and in-out bias `q`.
+    ///
+    /// Building the tables is `O(sum(deg(u)^2))` in the worst case — expensive
+    /// for dense graphs but amortizes well when generating many walks on the
+    /// same graph. For a single walk, prefer
+    /// [`crate::random_walk::generate_biased_walks`] to skip the upfront cost.
     pub fn new<G: GraphRef>(graph: &G, p: f32, q: f32) -> Self {
         let n = graph.node_count();
         let mut neighbors: Vec<Vec<usize>> = Vec::with_capacity(n);
@@ -397,8 +413,13 @@ impl PrecomputedBiasedWalks {
     }
 }
 
-/// Generate node2vec biased walks using precomputed alias tables (`PrecomputedBiasedWalks`),
-/// amortizing the per-step sampling cost across multiple walks over the same graph.
+/// Generate node2vec biased walks using precomputed alias tables
+/// ([`PrecomputedBiasedWalks`]), amortizing the per-step sampling cost across
+/// multiple walks over the same graph.
+///
+/// Use this when running node2vec repeatedly with the same `(graph, p, q)` —
+/// e.g. inside a hyperparameter search loop or a multi-epoch training run.
+/// The alias tables make each step `O(1)` vs the `O(deg)` of the naive variant.
 pub fn generate_biased_walks_precomp_ref(
     pre: &PrecomputedBiasedWalks,
     config: crate::random_walk::WalkConfig,

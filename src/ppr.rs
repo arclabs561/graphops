@@ -4,8 +4,10 @@ use crate::graph::Graph;
 use crate::pagerank::{PageRankConfig, PageRankRun};
 use crate::{Error, Result};
 
-/// Checked variant of `personalized_pagerank`: validates config and the personalization vector
-/// (same length as node_count, finite, non-negative, positive sum).
+/// Validated personalized PageRank. Checks `config` and the personalization
+/// vector (length equals `node_count`, all entries finite and non-negative,
+/// sum is positive). Returns only the scores; use
+/// [`personalized_pagerank_checked_run`] for convergence diagnostics.
 pub fn personalized_pagerank_checked<G: Graph>(
     graph: &G,
     config: PageRankConfig,
@@ -69,7 +71,9 @@ pub fn personalized_pagerank<G: Graph>(
     personalized_pagerank_run(graph, config, personalization).scores
 }
 
-/// `personalized_pagerank_checked` with full run diagnostics.
+/// Validated personalized PageRank with full diagnostics. Errors on invalid
+/// config or personalization vector; returns a [`PageRankRun`] including
+/// iteration count and final L1 delta on success.
 pub fn personalized_pagerank_checked_run<G: Graph>(
     graph: &G,
     config: PageRankConfig,
@@ -80,7 +84,9 @@ pub fn personalized_pagerank_checked_run<G: Graph>(
     Ok(personalized_pagerank_run(graph, config, personalization))
 }
 
-/// `personalized_pagerank` with full run diagnostics.
+/// Personalized PageRank with full diagnostics. No input validation — assumes
+/// `personalization.len() == graph.node_count()`. Use
+/// [`personalized_pagerank_checked_run`] for validated entrypoint.
 pub fn personalized_pagerank_run<G: Graph>(
     graph: &G,
     config: PageRankConfig,
