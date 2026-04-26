@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.3.0]
+
+### Added
+
+- `katz_centrality` (and `_run` / `_checked` variants) — Katz centrality via
+  power iteration with the same `simd` L1-residual gate as PageRank.
+  `KatzConfig` defaults: `alpha = 0.1`, `beta = 1.0`, `max_iterations = 100`,
+  `tolerance = 1e-6`. The `_checked` form rejects `alpha >= 1`; tighter
+  bounds (`alpha < 1/spectral_radius(A)`) may be needed for large graphs.
+
 ## [0.2.2]
 
 ### Changed
