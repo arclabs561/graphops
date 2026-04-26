@@ -25,6 +25,7 @@ rayon = { version = "1.10", optional = true }
 ordered-float = "4.2"
 thiserror = "2.0"
 petgraph = { version = "0.6", optional = true }
+innr = { version = "0.4", optional = true }
 
 [dev-dependencies]
 proptest = "1.9"
@@ -36,6 +37,8 @@ default = []
 serde = ["dep:serde"]
 parallel = ["dep:rayon"]
 petgraph = ["dep:petgraph"]
+# SIMD-accelerated f64 reductions in PageRank convergence checks via innr.
+simd = ["dep:innr"]
 
 
 [package.metadata.docs.rs]

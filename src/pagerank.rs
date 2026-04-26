@@ -161,6 +161,11 @@ pub fn pagerank_run<G: Graph>(graph: &G, config: PageRankConfig) -> PageRankRun 
             }
         }
 
+        // L1 residual = Σ|old - new|. SIMD-accelerated via innr when the
+        // `simd` feature is enabled; portable fallback uses the iterator path.
+        #[cfg(feature = "simd")]
+        let diff: f64 = innr::dense_f64::l1_distance_f64(&scores, &new_scores);
+        #[cfg(not(feature = "simd"))]
         let diff: f64 = scores
             .iter()
             .zip(new_scores.iter())
@@ -257,6 +262,11 @@ pub fn pagerank_weighted_run<G: WeightedGraph>(graph: &G, config: PageRankConfig
             }
         }
 
+        // L1 residual = Σ|old - new|. SIMD-accelerated via innr when the
+        // `simd` feature is enabled; portable fallback uses the iterator path.
+        #[cfg(feature = "simd")]
+        let diff: f64 = innr::dense_f64::l1_distance_f64(&scores, &new_scores);
+        #[cfg(not(feature = "simd"))]
         let diff: f64 = scores
             .iter()
             .zip(new_scores.iter())
