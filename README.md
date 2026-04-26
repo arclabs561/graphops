@@ -4,7 +4,7 @@
 [![Documentation](https://docs.rs/graphops/badge.svg)](https://docs.rs/graphops)
 [![CI](https://github.com/arclabs561/graphops/actions/workflows/ci.yml/badge.svg)](https://github.com/arclabs561/graphops/actions/workflows/ci.yml)
 
-Graph algorithms in Rust: PageRank and personalized PageRank, uniform
+Graph algorithms: PageRank and personalized PageRank, uniform
 and biased random walks, node2vec, betweenness centrality, and
 reachability. Operates on adjacency matrices or
 [petgraph](https://crates.io/crates/petgraph) graphs.
