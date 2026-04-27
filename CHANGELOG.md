@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.4.0]
+
+### Added
+
+- `newman_betweenness` (and `_run` / `_checked` variants) — Newman (2005)
+  random-walk betweenness centrality. Each source-sink pair contributes via a
+  Jacobi-solved current-flow on the graph Laplacian; node scores aggregate
+  edge currents incident to each node. `NewmanBetweennessConfig` defaults:
+  `n_sources = usize::MAX` (exact, all sources), `seed = 42`,
+  `max_iter = 200`, `tolerance = 1e-6`. Set `n_sources` smaller for an
+  approximation that scales to larger graphs.
+- `betweenness` module is now unconditionally compiled; the existing
+  petgraph-based Brandes impl is internally feature-gated. Newman has no
+  petgraph dependency.
+
 ## [0.3.0]
 
 ### Added

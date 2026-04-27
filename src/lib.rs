@@ -16,7 +16,6 @@
 //! - convergence details (so long as tolerance semantics remain correct)
 //! - internal data structures (so long as invariants hold)
 
-#[cfg(feature = "petgraph")]
 pub mod betweenness;
 pub mod centrality;
 pub mod eigenvector;
@@ -40,6 +39,10 @@ pub mod triangle;
 
 #[cfg(feature = "petgraph")]
 pub use betweenness::betweenness_centrality;
+pub use betweenness::{
+    newman_betweenness, newman_betweenness_checked, newman_betweenness_run,
+    NewmanBetweennessConfig, NewmanBetweennessRun,
+};
 #[cfg(feature = "petgraph")]
 pub use graph::PetgraphRef;
 pub use graph::{AdjacencyMatrix, Graph, GraphRef, WeightedGraph, WeightedGraphRef};
