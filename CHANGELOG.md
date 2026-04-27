@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.4.1]
+
+### Documented
+
+- `newman_betweenness` now documents its scaling behavior up front: exact
+  mode is `O(n^2 * max_iter * d)` and recommends sampling for `n >= 500`
+  (`n_sources = sqrt(n)` rule of thumb) and is impractical above `n = 10000`.
+  Previously a user could call the function with default config on a large
+  graph and silently wait for hours.
+- `katz_centrality` and `newman_betweenness` both note that no in-tree
+  consumer currently uses them (sheaf's community-detection path uses
+  Leiden/Louvain, not centrality). They are speculative additions, not
+  consumer-driven, and exist for callers with their own use cases.
+
 ## [0.4.0]
 
 ### Added

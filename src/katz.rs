@@ -105,6 +105,11 @@ pub struct KatzRun {
 
 /// Compute Katz centrality scores for all nodes using default parameters.
 ///
+/// **Currently no in-tree consumer.** Added in graphops 0.3 to round out the
+/// centrality offering alongside Newman betweenness; the queued sheaf
+/// community-detection workflow consumes Leiden/Louvain (partition assignment),
+/// not centrality.  Use it if you have your own use case.
+///
 /// # Examples
 ///
 /// ```

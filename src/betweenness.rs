@@ -167,6 +167,29 @@ pub struct NewmanBetweennessRun {
 /// each node.  Summing over all pairs gives a betweenness score that captures
 /// long-range connectivity, unlike the shortest-path version.
 ///
+/// # Performance and scaling
+///
+/// The exact form (default `n_sources = usize::MAX`) iterates over every
+/// `(s, t)` pair and runs one Jacobi linear-solve per pair, costing
+/// approximately `O(n_pairs * max_iter * avg_degree) = O(n^2 * max_iter * d)`
+/// total work.  Practical guidance:
+///
+/// - **`n <= ~500`**: exact mode is fine.  Sub-second on small graphs.
+/// - **`n` in `~500..10_000`**: set `n_sources` to a fixed sample
+///   (e.g. `((n as f64).sqrt() as usize).max(64)`) — this drops the cost to
+///   `O(n_sources * n * max_iter * d)`.  Scores are unbiased estimates of the
+///   exact betweenness up to a constant factor.
+/// - **`n >= 10_000`**: exact mode is impractical (hours).  Always sample.
+///
+/// `_run` returns convergence diagnostics so callers can detect cases where
+/// the Jacobi solver hit `max_iter` without converging (signals a poorly-
+/// conditioned source–sink pair, often near disconnected components).
+///
+/// **Currently no in-tree consumer.** This was added alongside Katz centrality
+/// in graphops 0.4 to round out the centrality offering; the queued sheaf
+/// community-detection workflow uses Leiden/Louvain (partition assignment),
+/// not centrality (node ranking).  Use it if you have your own use case.
+///
 /// # Mathematical background
 ///
 /// For each pair `(s, t)` the potential vector \\(v\\) satisfies
