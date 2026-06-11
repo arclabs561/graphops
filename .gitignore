@@ -3,3 +3,4 @@ target/
 .DS_Store
 proptest-regressions/
 Cargo.lock
+/semver-checks/
