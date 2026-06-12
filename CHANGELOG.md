@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.4.3]
+
+### Changed
+
+- Eigenvector L1 and current-flow-centrality L2 convergence residuals now
+  route through `innr::dense_f64` under the `simd` feature, matching
+  pagerank/katz/betweenness. With innr 0.6.1 these f64 reductions dispatch
+  to AVX-512/AVX2/NEON; portable fallback unchanged when `simd` is off.
+
 ## [0.4.1]
 
 ### Documented
