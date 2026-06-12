@@ -18,6 +18,9 @@ env:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    # crates.io trusted-publishing config for this crate requires the
+    # `crates-io` environment; the JWT must carry the environment claim.
+    environment: crates-io
     steps:
       - name: Guard
         run: |
