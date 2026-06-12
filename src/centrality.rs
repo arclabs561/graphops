@@ -175,11 +175,20 @@ fn l2_normalize(v: &mut [f64]) {
 }
 
 fn l2_diff(a: &[f64], b: &[f64]) -> f64 {
-    a.iter()
-        .zip(b.iter())
-        .map(|(x, y)| (x - y) * (x - y))
-        .sum::<f64>()
-        .sqrt()
+    // SIMD-accelerated via innr when the `simd` feature is on; portable
+    // otherwise. innr::dense_f64::l2_distance_f64 is sqrt of the squared sum.
+    #[cfg(feature = "simd")]
+    {
+        innr::dense_f64::l2_distance_f64(a, b)
+    }
+    #[cfg(not(feature = "simd"))]
+    {
+        a.iter()
+            .zip(b.iter())
+            .map(|(x, y)| (x - y) * (x - y))
+            .sum::<f64>()
+            .sqrt()
+    }
 }
 
 #[cfg(test)]

@@ -97,12 +97,20 @@ pub fn eigenvector_centrality_run<G: GraphRef>(
             }
         }
 
-        // Compute L1 diff.
-        diff_l1 = scores
-            .iter()
-            .zip(new_scores.iter())
-            .map(|(a, b)| (a - b).abs())
-            .sum();
+        // L1 residual. SIMD-accelerated via innr when the `simd` feature is
+        // on (same path pagerank/katz/betweenness use); portable otherwise.
+        #[cfg(feature = "simd")]
+        {
+            diff_l1 = innr::dense_f64::l1_distance_f64(&scores, &new_scores);
+        }
+        #[cfg(not(feature = "simd"))]
+        {
+            diff_l1 = scores
+                .iter()
+                .zip(new_scores.iter())
+                .map(|(a, b)| (a - b).abs())
+                .sum();
+        }
 
         std::mem::swap(&mut scores, &mut new_scores);
 
