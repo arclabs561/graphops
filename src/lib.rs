@@ -5,7 +5,7 @@
 //! Call sites should prefer `graphops::*` (and not refer to historical names).
 //!
 //! Public invariants (must not drift):
-//! - **Node order**: outputs are indexed by node id \(0..n-1\) consistent with the input graph’s
+//! - **Node order**: outputs are indexed by node id `0..n-1` consistent with the input graph’s
 //!   adapter semantics (e.g. `petgraph::NodeIndex::index()` when using the `petgraph` feature).
 //! - **Determinism**: deterministic operators are deterministic given identical inputs + configs.
 //! - **No silent normalization**: normalization behavior is explicit in the API/docs (e.g.

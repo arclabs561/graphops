@@ -11,7 +11,7 @@ reachability. Operates on adjacency matrices or
 
 ```toml
 [dependencies]
-graphops = "0.1.4"
+graphops = "0.4.3"
 ```
 
 ## PageRank
