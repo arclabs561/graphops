@@ -4,9 +4,9 @@
 //! missing edges using ellipsoid overlap as a link score. Higher overlap
 //! between two node ellipsoids suggests a more likely connection.
 //!
-//! This demonstrates the connection between graphops::ellipsoidal (unsupervised
-//! spectral embedding) and subsume-style region embeddings (supervised KG
-//! embedding): both use geometric regions for relational reasoning.
+//! This demonstrates a region-based graph representation: nearby nodes should
+//! have ellipsoids with higher overlap, and plausible missing links can be
+//! ranked by that overlap.
 
 use graphops::ellipsoidal::{
     ellipsoid_distance, ellipsoid_overlap, ellipsoidal_embedding, EllipsoidalConfig,

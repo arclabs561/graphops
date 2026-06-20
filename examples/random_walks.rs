@@ -52,7 +52,7 @@ fn main() {
 
     // Node2vec-style biased walks.
     // p < 1: prefer returning to the previous node (local exploration).
-    // q < 1: prefer moving away from the previous node (BFS-like).
+    // q < 1: prefer moving outward from the previous node (DFS-like exploration).
     let biased_config = WalkConfig {
         length: 10,
         walks_per_node: 3,

@@ -115,6 +115,8 @@ let scores = betweenness_centrality(&g);
 
 ## Examples
 
+See [`examples/README.md`](examples/README.md) for what to inspect in each example.
+
 | Example | What it shows |
 |---------|---------------|
 | `pagerank` | PageRank on a small directed graph |
@@ -126,6 +128,7 @@ let scores = betweenness_centrality(&g);
 cargo run --example pagerank
 cargo run --example community_detection
 cargo run --example random_walks
+cargo run --example ellipsoidal_link_prediction
 ```
 
 ## Feature flags
