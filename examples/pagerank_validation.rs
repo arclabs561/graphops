@@ -10,6 +10,9 @@
 //! cargo run --release --example pagerank_validation
 //! ```
 
+// Index loops are the clearest form for dense adjacency-matrix construction.
+#![allow(clippy::needless_range_loop)]
+
 use std::collections::HashMap;
 use std::path::Path;
 use std::process::ExitCode;
