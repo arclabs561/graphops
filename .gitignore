@@ -1,6 +1,8 @@
 target/
 **/target/
 .DS_Store
+# Real datasets fetched by scripts/fetch_*.sh (examples only)
+/data/
 proptest-regressions/
 Cargo.lock
 /semver-checks/
