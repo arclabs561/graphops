@@ -1,23 +1,10 @@
 /// Generate random walks for node embedding pipelines.
 ///
-/// Shows uniform walks and node2vec-style biased walks (with return
-/// parameter p and in-out parameter q) on a small social graph.
+/// Prints uniform walks and node2vec-style biased walks on a small graph.
+/// The biased run uses return parameter p and in-out parameter q.
 ///
 /// ```sh
 /// cargo run --example random_walks
-/// ```
-///
-/// Expected output (walks are stochastic, exact nodes will vary):
-///
-/// ```text
-/// === Uniform random walks ===
-/// Walk 0 from node 0: [0, 3, 2, 1, 0, 2, ...]
-/// Walk 1 from node 0: [0, 1, 3, 0, 2, 1, ...]
-/// ...
-///
-/// === Biased walks (node2vec: p=1.0, q=0.5) ===
-/// Walk 0 from node 0: [0, 2, 1, 0, 3, 2, ...]
-/// ...
 /// ```
 use graphops::graph::AdjacencyMatrix;
 use graphops::random_walk::{generate_biased_walks, generate_walks, WalkConfig};
@@ -57,7 +44,7 @@ fn main() {
         length: 10,
         walks_per_node: 3,
         p: 1.0,
-        q: 0.5, // bias toward exploring new neighborhoods
+        q: 0.5,
         seed: 42,
     };
     let biased_walks = generate_biased_walks(&g, biased_config);

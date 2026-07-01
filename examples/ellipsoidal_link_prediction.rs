@@ -4,9 +4,8 @@
 //! missing edges using ellipsoid overlap as a link score. Higher overlap
 //! between two node ellipsoids suggests a more likely connection.
 //!
-//! This demonstrates a region-based graph representation: nearby nodes should
-//! have ellipsoids with higher overlap, and plausible missing links can be
-//! ranked by that overlap.
+//! The output ranks missing links by overlap and compares intra-cluster and
+//! inter-cluster distances.
 
 use graphops::ellipsoidal::{
     ellipsoid_distance, ellipsoid_overlap, ellipsoidal_embedding, EllipsoidalConfig,

@@ -1,24 +1,10 @@
 /// Detect communities with Louvain and Leiden algorithms.
 ///
 /// Builds a small graph with two dense clusters connected by a bridge
-/// and shows how both algorithms recover the cluster structure.
+/// and prints labels from both algorithms.
 ///
 /// ```sh
 /// cargo run --example community_detection
-/// ```
-///
-/// Expected output:
-///
-/// ```text
-/// Graph: 9 nodes, two clusters connected by node 3 <-> 5
-///
-/// Louvain communities: ...
-///   Community 0: nodes [0, 1, 2, 3, 4]
-///   Community 1: nodes [5, 6, 7, 8]
-///
-/// Leiden communities: ...
-///   Community 0: nodes [0, 1, 2, 3, 4]
-///   Community 1: nodes [5, 6, 7, 8]
 /// ```
 use graphops::graph::GraphRef;
 use graphops::{leiden_seeded, louvain_seeded};

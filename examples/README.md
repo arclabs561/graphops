@@ -20,7 +20,7 @@ cargo run --example lazy_frontier
 
 ## What to inspect
 
-- `pagerank` prints a normalized score vector and the highest-ranked node. Node C ranks highest because it receives edges from three nodes.
+- `pagerank` prints a normalized score vector and the highest-ranked node.
 - `community_detection` compares Louvain and Leiden on two dense clusters joined by a bridge.
 - `random_walks` prints uniform walks and node2vec-style walks with `q < 1`, which biases walks outward from the previous node.
 - `ellipsoidal_link_prediction` embeds nodes as ellipsoids, ranks non-edges by overlap, and compares intra-cluster vs. inter-cluster distance.

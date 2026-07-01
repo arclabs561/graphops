@@ -34,9 +34,8 @@ fn main() {
     }
 
     let sum: f64 = scores.iter().sum();
-    println!("\nSum of scores: {:.6} (should be ~1.0)", sum);
+    println!("\nSum of scores: {:.6} (expected near 1.0)", sum);
 
-    // Node 2 (C) should rank highest: it receives edges from 0, 1, and 3.
     let max_node = scores
         .iter()
         .enumerate()

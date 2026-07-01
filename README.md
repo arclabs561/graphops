@@ -117,7 +117,7 @@ let scores = betweenness_centrality(&g);
 
 See [`examples/README.md`](examples/README.md) for what to inspect in each example.
 
-| Example | What it shows |
+| Example | What it covers |
 |---------|---------------|
 | `pagerank` | PageRank on a small directed graph |
 | `community_detection` | Louvain and Leiden community detection on a two-cluster graph |
