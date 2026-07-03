@@ -9,8 +9,9 @@
 //! comparison to remove that as a variable.
 //!
 //! Covered: pagerank (unweighted, with a dangling node) and pagerank_weighted.
-//! Deferred: Brandes betweenness (petgraph-feature-gated) and connected
-//! components (no single graphops function maps cleanly to networkx).
+//! Brandes betweenness (petgraph-feature-gated) is now covered in the sibling
+//! file `rosetta_graphops_betweenness.rs`. Deferred: connected components (no
+//! single graphops function maps cleanly to networkx).
 //!
 //! Regenerate the fixture: `uv run tests/fixtures/rosetta/gen_graphops.py`.
 
