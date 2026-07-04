@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.5.0] - 2026-07-03
+
+### Added
+
+- `hom_counts` module: rooted walk and closed-walk counts per node — the
+  tractable homomorphism-count families (rooted paths and cycles), grounded
+  in the Dell-Grohe-Rattan treewidth/WL correspondence, intended as
+  expressiveness-raising GNN node features.
+
 ## [0.4.3]
 
 ### Changed

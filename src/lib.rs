@@ -23,6 +23,7 @@ pub mod ellipsoidal;
 pub mod graph;
 /// Graph kernels: WL subtree, random walk, and sliced Wasserstein.
 pub mod graph_kernel;
+pub mod hom_counts;
 pub mod katz;
 pub mod leiden;
 pub mod louvain;
@@ -69,6 +70,7 @@ pub use graph_kernel::{
     random_walk_kernel, sliced_wasserstein_graph_kernel, structural_node_features,
     wl_subtree_kernel,
 };
+pub use hom_counts::{closed_walk_counts, walk_counts};
 pub use katz::{
     katz_centrality, katz_centrality_checked, katz_centrality_run, KatzConfig, KatzRun,
 };
