@@ -102,7 +102,7 @@ pub trait WeightedGraphRef {
 /// Wraps an existing `&[Vec<f64>]` where `matrix[i][j]` is the weight of edge
 /// `i -> j` and `0.0` means no edge. Suitable for small or dense graphs where
 /// a matrix is the natural representation; for sparse graphs prefer an
-/// adjacency-list adapter like [`PetgraphRef`].
+/// adjacency-list adapter like `PetgraphRef` (feature `petgraph`).
 ///
 /// # Example
 ///
