@@ -13,6 +13,17 @@ Graph algorithms and node embeddings.
 graphops = "0.5.0"
 ```
 
+## Capabilities
+
+| Family | Algorithms | Reference |
+|---|---|---|
+| Ranking and centrality | PageRank, personalized PageRank, HITS, Katz, eigenvector, closeness, harmonic, and betweenness | [`centrality`](https://docs.rs/graphops/latest/graphops/centrality/), [`pagerank`](examples/pagerank.rs) |
+| Communities and topology | Components, SCCs, topological sort, k-core, label propagation, Louvain, and Leiden | [`partition`](https://docs.rs/graphops/latest/graphops/partition/), [`community_detection`](examples/community_detection.rs) |
+| Traversal and paths | Reachability, BFS, and Dijkstra | [`reachability`](https://docs.rs/graphops/latest/graphops/reachability/), [`shortest_path`](https://docs.rs/graphops/latest/graphops/shortest_path/) |
+| Walks and embeddings | Uniform and node2vec walks; ellipsoidal embeddings | [`random_walk`](https://docs.rs/graphops/latest/graphops/random_walk/), [`random_walks`](examples/random_walks.rs), [`ellipsoidal_link_prediction`](examples/ellipsoidal_link_prediction.rs) |
+| Structural features | Triangles, clustering coefficients, walk counts, similarity, and top-k helpers | [`triangle`](https://docs.rs/graphops/latest/graphops/triangle/), [`hom_counts`](https://docs.rs/graphops/latest/graphops/hom_counts/) |
+| Graph kernels | Weisfeiler-Lehman subtree, random-walk, and sliced Wasserstein kernels | [`graph_kernel`](https://docs.rs/graphops/latest/graphops/graph_kernel/) |
+
 ## PageRank
 
 ```rust
@@ -59,7 +70,8 @@ let walks = generate_walks(&AdjacencyMatrix(&adj), config);
 // walks: Vec<Vec<usize>> -- each walk is a sequence of node indices
 ```
 
-For node2vec-style biased walks (with return parameter p and in-out parameter q), use `generate_biased_walks`. Parallel variants (`_parallel` suffix) are available with the `parallel` feature.
+Node2vec-style bias uses the return parameter `p` and in-out parameter `q`.
+Parallel walk generation is available with the `parallel` feature.
 
 ## Reachability
 
@@ -133,6 +145,16 @@ cargo run --example ellipsoidal_link_prediction
 ## Feature flags
 
 Optional features: `petgraph` (petgraph adapters + betweenness centrality), `parallel` (rayon walk generation), `serde`.
+
+## Limitations
+
+- Inputs must expose dense node identifiers in `0..node_count()` through the
+  graph traits; outputs use the same order. Directed and weighted semantics are
+  documented per algorithm.
+- Algorithms with randomized visit or sampling order accept a seed. Reuse the
+  seed when comparing runs.
+- This crate provides in-memory algorithm primitives. It does not provide graph
+  storage, queries, transactions, or a database service.
 
 ## License
 
