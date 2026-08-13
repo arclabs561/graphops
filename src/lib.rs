@@ -91,8 +91,12 @@ pub use partition::{
     connected_components, core_numbers, k_core, label_propagation, strongly_connected_components,
     topological_sort,
 };
-pub use ppr::{personalized_pagerank, personalized_pagerank_checked};
-pub use ppr::{personalized_pagerank_checked_run, personalized_pagerank_run};
+pub use ppr::{
+    personalized_pagerank, personalized_pagerank_checked, personalized_pagerank_checked_run,
+    personalized_pagerank_ref, personalized_pagerank_ref_checked,
+    personalized_pagerank_ref_checked_run, personalized_pagerank_ref_run,
+    personalized_pagerank_run,
+};
 pub use random_walk::{
     generate_biased_walks, generate_biased_walks_from_nodes, generate_biased_walks_ref,
     generate_biased_walks_ref_from_nodes, generate_biased_walks_ref_streaming_from_nodes,

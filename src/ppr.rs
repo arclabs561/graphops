@@ -1,6 +1,6 @@
 //! Personalized PageRank.
 
-use crate::graph::Graph;
+use crate::graph::{Graph, GraphRef};
 use crate::pagerank::{PageRankConfig, PageRankRun};
 use crate::{Error, Result};
 
@@ -14,7 +14,11 @@ pub fn personalized_pagerank_checked<G: Graph>(
     personalization: &[f64],
 ) -> Result<Vec<f64>> {
     config.validate()?;
-    let n = graph.node_count();
+    validate_personalization(graph.node_count(), personalization)?;
+    Ok(personalized_pagerank(graph, config, personalization))
+}
+
+fn validate_personalization(n: usize, personalization: &[f64]) -> Result<()> {
     if personalization.len() != n {
         return Err(Error::InvalidParameter(format!(
             "personalization length must equal node_count (len={} node_count={})",
@@ -40,7 +44,7 @@ pub fn personalized_pagerank_checked<G: Graph>(
             "personalization sum must be > 0".to_string(),
         ));
     }
-    Ok(personalized_pagerank(graph, config, personalization))
+    Ok(())
 }
 
 /// Compute Personalized PageRank with a teleport bias.
@@ -79,8 +83,8 @@ pub fn personalized_pagerank_checked_run<G: Graph>(
     config: PageRankConfig,
     personalization: &[f64],
 ) -> Result<PageRankRun> {
-    // validate via existing checked entrypoint
-    let _ = personalized_pagerank_checked(graph, config, personalization)?;
+    config.validate()?;
+    validate_personalization(graph.node_count(), personalization)?;
     Ok(personalized_pagerank_run(graph, config, personalization))
 }
 
@@ -88,6 +92,41 @@ pub fn personalized_pagerank_checked_run<G: Graph>(
 /// `personalization.len() == graph.node_count()`. Use
 /// [`personalized_pagerank_checked_run`] for validated entrypoint.
 pub fn personalized_pagerank_run<G: Graph>(
+    graph: &G,
+    config: PageRankConfig,
+    personalization: &[f64],
+) -> PageRankRun {
+    let n = graph.node_count();
+    let neighbors: Vec<Vec<usize>> = (0..n).map(|u| graph.neighbors(u)).collect();
+    personalized_pagerank_ref_run(&BorrowedAdjacency(&neighbors), config, personalization)
+}
+
+struct BorrowedAdjacency<'a>(&'a [Vec<usize>]);
+
+impl GraphRef for BorrowedAdjacency<'_> {
+    fn node_count(&self) -> usize {
+        self.0.len()
+    }
+
+    fn neighbors_ref(&self, node: usize) -> &[usize] {
+        &self.0[node]
+    }
+}
+
+/// Compute personalized PageRank over borrowed adjacency lists.
+///
+/// This has the same transition and dangling-node semantics as
+/// [`personalized_pagerank`], without copying neighbor lists before iteration.
+pub fn personalized_pagerank_ref<G: GraphRef>(
+    graph: &G,
+    config: PageRankConfig,
+    personalization: &[f64],
+) -> Vec<f64> {
+    personalized_pagerank_ref_run(graph, config, personalization).scores
+}
+
+/// Personalized PageRank with convergence reporting over borrowed adjacency lists.
+pub fn personalized_pagerank_ref_run<G: GraphRef>(
     graph: &G,
     config: PageRankConfig,
     personalization: &[f64],
@@ -109,7 +148,7 @@ pub fn personalized_pagerank_run<G: Graph>(
     };
     let mut scores = p_vec.clone();
     let mut new_scores = vec![0.0; n];
-    let out_degrees: Vec<usize> = (0..n).map(|i| graph.out_degree(i)).collect();
+    let out_degrees: Vec<usize> = (0..n).map(|i| graph.neighbors_ref(i).len()).collect();
 
     let mut iters = 0usize;
     let mut last_diff = f64::INFINITY;
@@ -130,7 +169,7 @@ pub fn personalized_pagerank_run<G: Graph>(
             let deg = out_degrees[u];
             if deg > 0 {
                 let share = config.damping * scores[u] / deg as f64;
-                for v in graph.neighbors(u) {
+                for &v in graph.neighbors_ref(u) {
                     new_scores[v] += share;
                 }
             }
@@ -153,6 +192,32 @@ pub fn personalized_pagerank_run<G: Graph>(
         diff_l1: last_diff,
         converged,
     }
+}
+
+/// Checked personalized PageRank over borrowed adjacency lists.
+pub fn personalized_pagerank_ref_checked<G: GraphRef>(
+    graph: &G,
+    config: PageRankConfig,
+    personalization: &[f64],
+) -> Result<Vec<f64>> {
+    config.validate()?;
+    validate_personalization(graph.node_count(), personalization)?;
+    Ok(personalized_pagerank_ref(graph, config, personalization))
+}
+
+/// Checked personalized PageRank with diagnostics over borrowed adjacency lists.
+pub fn personalized_pagerank_ref_checked_run<G: GraphRef>(
+    graph: &G,
+    config: PageRankConfig,
+    personalization: &[f64],
+) -> Result<PageRankRun> {
+    config.validate()?;
+    validate_personalization(graph.node_count(), personalization)?;
+    Ok(personalized_pagerank_ref_run(
+        graph,
+        config,
+        personalization,
+    ))
 }
 
 #[cfg(test)]
