@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- Borrowed-adjacency PageRank and personalized PageRank entry points for
+  `GraphRef` implementations, including checked and diagnostic variants.
+
 ## [0.5.0] - 2026-07-03
 
 ### Added
