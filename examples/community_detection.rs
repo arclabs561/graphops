@@ -1,4 +1,4 @@
-/// Detect communities with Louvain and Leiden algorithms.
+/// Compare Louvain with connectivity-refined Louvain.
 ///
 /// Builds a small graph with two dense clusters connected by a bridge
 /// and prints labels from both algorithms.
@@ -7,7 +7,7 @@
 /// cargo run --example community_detection
 /// ```
 use graphops::graph::GraphRef;
-use graphops::{leiden_seeded, louvain_seeded};
+use graphops::{louvain_connected_seeded, louvain_seeded};
 
 /// Adjacency list graph (implements GraphRef for borrowed neighbor access).
 struct VecGraph {
@@ -48,9 +48,9 @@ fn main() {
     println!("Louvain communities: {:?}", louvain);
     print_communities(&louvain);
 
-    let leiden = leiden_seeded(&g, 1.0, 42);
-    println!("Leiden communities: {:?}", leiden);
-    print_communities(&leiden);
+    let connected = louvain_connected_seeded(&g, 1.0, 42);
+    println!("Connectivity-refined Louvain communities: {connected:?}");
+    print_communities(&connected);
 }
 
 fn print_communities(labels: &[usize]) {

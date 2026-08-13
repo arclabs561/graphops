@@ -1,6 +1,6 @@
 //! PageRank centrality (power iteration on a random-surfer Markov chain).
 
-use crate::graph::{Graph, WeightedGraph};
+use crate::graph::{Graph, GraphRef, WeightedGraph};
 use crate::{Error, Result};
 
 /// Result of a PageRank run: scores plus convergence diagnostics.
@@ -121,6 +121,35 @@ pub fn pagerank<G: Graph>(graph: &G, config: PageRankConfig) -> Vec<f64> {
 /// `diff_l1` is the final \(L_1\) residual (sum of absolute deltas).
 pub fn pagerank_run<G: Graph>(graph: &G, config: PageRankConfig) -> PageRankRun {
     let n = graph.node_count();
+    // Precompute neighbor lists once to avoid per-iteration allocation.
+    let neighbors: Vec<Vec<usize>> = (0..n).map(|u| graph.neighbors(u)).collect();
+    pagerank_ref_run(&BorrowedAdjacency(&neighbors), config)
+}
+
+struct BorrowedAdjacency<'a>(&'a [Vec<usize>]);
+
+impl GraphRef for BorrowedAdjacency<'_> {
+    fn node_count(&self) -> usize {
+        self.0.len()
+    }
+
+    fn neighbors_ref(&self, node: usize) -> &[usize] {
+        &self.0[node]
+    }
+}
+
+/// Compute PageRank over borrowed adjacency lists.
+///
+/// Unlike [`pagerank`], this path does not copy edge lists before iteration.
+/// Prefer it for CSR and adjacency-list representations that can return stable
+/// neighbor slices.
+pub fn pagerank_ref<G: GraphRef>(graph: &G, config: PageRankConfig) -> Vec<f64> {
+    pagerank_ref_run(graph, config).scores
+}
+
+/// PageRank with convergence reporting over borrowed adjacency lists.
+pub fn pagerank_ref_run<G: GraphRef>(graph: &G, config: PageRankConfig) -> PageRankRun {
+    let n = graph.node_count();
     if n == 0 {
         return PageRankRun {
             scores: Vec::new(),
@@ -132,9 +161,7 @@ pub fn pagerank_run<G: Graph>(graph: &G, config: PageRankConfig) -> PageRankRun 
     let n_f64 = n as f64;
     let mut scores = vec![1.0 / n_f64; n];
     let mut new_scores = vec![0.0; n];
-    // Precompute neighbor lists once to avoid per-iteration allocation.
-    let neighbors: Vec<Vec<usize>> = (0..n).map(|u| graph.neighbors(u)).collect();
-    let out_degrees: Vec<usize> = neighbors.iter().map(|nb| nb.len()).collect();
+    let out_degrees: Vec<usize> = (0..n).map(|u| graph.neighbors_ref(u).len()).collect();
 
     let mut iters = 0usize;
     let mut last_diff = f64::INFINITY;
@@ -155,7 +182,7 @@ pub fn pagerank_run<G: Graph>(graph: &G, config: PageRankConfig) -> PageRankRun 
             let deg = out_degrees[u];
             if deg > 0 {
                 let share = config.damping * scores[u] / deg as f64;
-                for &v in &neighbors[u] {
+                for &v in graph.neighbors_ref(u) {
                     new_scores[v] += share;
                 }
             }
@@ -184,6 +211,21 @@ pub fn pagerank_run<G: Graph>(graph: &G, config: PageRankConfig) -> PageRankRun 
         diff_l1: last_diff,
         converged,
     }
+}
+
+/// Checked PageRank over borrowed adjacency lists.
+pub fn pagerank_ref_checked<G: GraphRef>(graph: &G, config: PageRankConfig) -> Result<Vec<f64>> {
+    config.validate()?;
+    Ok(pagerank_ref(graph, config))
+}
+
+/// Checked PageRank with diagnostics over borrowed adjacency lists.
+pub fn pagerank_ref_checked_run<G: GraphRef>(
+    graph: &G,
+    config: PageRankConfig,
+) -> Result<PageRankRun> {
+    config.validate()?;
+    Ok(pagerank_ref_run(graph, config))
 }
 
 /// Weighted PageRank centrality.
@@ -296,6 +338,11 @@ pub fn pagerank_weighted_checked<G: WeightedGraph>(
     config: PageRankConfig,
 ) -> Result<Vec<f64>> {
     config.validate()?;
+    validate_weights(graph)?;
+    Ok(pagerank_weighted(graph, config))
+}
+
+fn validate_weights<G: WeightedGraph>(graph: &G) -> Result<()> {
     let n = graph.node_count();
     for u in 0..n {
         for v in graph.neighbors(u) {
@@ -312,7 +359,7 @@ pub fn pagerank_weighted_checked<G: WeightedGraph>(
             }
         }
     }
-    Ok(pagerank_weighted(graph, config))
+    Ok(())
 }
 
 /// Validated PageRank with full diagnostics. Errors on invalid `config` and
@@ -329,9 +376,8 @@ pub fn pagerank_weighted_checked_run<G: WeightedGraph>(
     graph: &G,
     config: PageRankConfig,
 ) -> Result<PageRankRun> {
-    // Validate config + weights by calling the existing checked wrapper first.
-    // Then re-run with convergence reporting (no additional validation needed).
-    let _ = pagerank_weighted_checked(graph, config)?;
+    config.validate()?;
+    validate_weights(graph)?;
     Ok(pagerank_weighted_run(graph, config))
 }
 
@@ -340,6 +386,78 @@ mod tests {
     use super::*;
     use crate::graph::AdjacencyMatrix;
     use proptest::prelude::*;
+    use std::cell::Cell;
+
+    struct RefGraph(Vec<Vec<usize>>);
+
+    impl GraphRef for RefGraph {
+        fn node_count(&self) -> usize {
+            self.0.len()
+        }
+
+        fn neighbors_ref(&self, node: usize) -> &[usize] {
+            &self.0[node]
+        }
+    }
+
+    #[test]
+    fn pagerank_ref_matches_owned_path() {
+        let adjacency = vec![vec![1, 2], vec![2], vec![0], vec![]];
+        let borrowed = RefGraph(adjacency.clone());
+
+        struct Owned(Vec<Vec<usize>>);
+        impl Graph for Owned {
+            fn node_count(&self) -> usize {
+                self.0.len()
+            }
+            fn neighbors(&self, node: usize) -> Vec<usize> {
+                self.0[node].clone()
+            }
+        }
+
+        let config = PageRankConfig {
+            tolerance: 1e-12,
+            ..PageRankConfig::default()
+        };
+        let owned = pagerank_run(&Owned(adjacency), config);
+        let by_ref = pagerank_ref_run(&borrowed, config);
+        assert_eq!(owned.iterations, by_ref.iterations);
+        assert_eq!(owned.converged, by_ref.converged);
+        assert_eq!(owned.scores, by_ref.scores);
+        assert_eq!(owned.diff_l1, by_ref.diff_l1);
+    }
+
+    #[test]
+    fn weighted_checked_run_executes_solver_once() {
+        struct CountedWeighted {
+            adjacency: Vec<Vec<usize>>,
+            neighbor_calls: Cell<usize>,
+        }
+        impl Graph for CountedWeighted {
+            fn node_count(&self) -> usize {
+                self.adjacency.len()
+            }
+            fn neighbors(&self, node: usize) -> Vec<usize> {
+                self.neighbor_calls.set(self.neighbor_calls.get() + 1);
+                self.adjacency[node].clone()
+            }
+        }
+        impl WeightedGraph for CountedWeighted {
+            fn edge_weight(&self, _source: usize, _target: usize) -> f64 {
+                1.0
+            }
+        }
+
+        let graph = CountedWeighted {
+            adjacency: vec![vec![1], vec![0]],
+            neighbor_calls: Cell::new(0),
+        };
+        pagerank_weighted_checked_run(&graph, PageRankConfig::default()).unwrap();
+
+        // One graph scan validates weights and one builds the solver's cached
+        // adjacency. A duplicate solver execution would add a third scan.
+        assert_eq!(graph.neighbor_calls.get(), 2 * graph.node_count());
+    }
 
     #[test]
     fn test_pagerank_weighted_sums_to_one() {

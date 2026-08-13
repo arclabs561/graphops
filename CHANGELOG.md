@@ -28,8 +28,8 @@
   Previously a user could call the function with default config on a large
   graph and silently wait for hours.
 - `katz_centrality` and `newman_betweenness` both note that no in-tree
-  consumer currently uses them (sheaf's community-detection path uses
-  Leiden/Louvain, not centrality). They are speculative additions, not
+  consumer currently uses them (sheaf's path uses the community-detection
+  routines, not centrality). They are speculative additions, not
   consumer-driven, and exist for callers with their own use cases.
 
 ## [0.4.0]

@@ -1,14 +1,17 @@
-//! Leiden community detection (Traag, Waltman & van Eck, 2019).
+//! Connectivity-refined Louvain community detection.
 //!
-//! Improves Louvain with a refinement phase that guarantees all communities
-//! are internally connected. Operates on `GraphRef` (unweighted edges = weight 1.0)
-//! or `WeightedGraph` for edge-weight-aware variants.
+//! This is Louvain local moving followed by splitting disconnected components.
+//! It guarantees connected output communities, but it does not implement the
+//! constrained merge refinement phase of the Leiden algorithm (Traag, Waltman
+//! & van Eck, 2019). Operates on `GraphRef` (unweighted edges = weight 1.0) or
+//! `WeightedGraph` for edge-weight-aware variants.
+//! Inputs are expected to represent an undirected graph with symmetric
+//! adjacency; the connectivity guarantee is with respect to that contract.
 //!
 //! ## Three Phases
 //!
 //! 1. **Local moving**: greedily reassign nodes to maximize modularity gain (same as Louvain).
-//! 2. **Refinement**: within each community, reset to singletons and re-merge only
-//!    within community boundaries, ensuring connectivity.
+//! 2. **Connectivity split**: split disconnected components within each community.
 //! 3. **Aggregation**: collapse communities into super-nodes, repeat.
 //!
 //! ## Complexity
@@ -18,18 +21,32 @@
 use crate::graph::{GraphRef, WeightedGraph};
 use std::collections::{HashMap, HashSet, VecDeque};
 
-/// Run Leiden community detection with default resolution (1.0).
+/// Legacy compatibility name for [`louvain_connected`].
+///
+/// This routine does not implement Leiden's constrained-merge refinement.
 pub fn leiden<G: GraphRef>(graph: &G, resolution: f64) -> Vec<usize> {
-    leiden_seeded(graph, resolution, 0)
+    louvain_connected(graph, resolution)
 }
 
-/// Run Leiden community detection with explicit seed.
+/// Run connectivity-refined Louvain with default seed (0).
+pub fn louvain_connected<G: GraphRef>(graph: &G, resolution: f64) -> Vec<usize> {
+    louvain_connected_seeded(graph, resolution, 0)
+}
+
+/// Legacy compatibility name for [`louvain_connected_seeded`].
+///
+/// This routine does not implement Leiden's constrained-merge refinement.
+pub fn leiden_seeded<G: GraphRef>(graph: &G, resolution: f64, seed: u64) -> Vec<usize> {
+    louvain_connected_seeded(graph, resolution, seed)
+}
+
+/// Run connectivity-refined Louvain with an explicit seed.
 ///
 /// Returns a community label for each node, contiguous in `0..k`.
 /// All communities are guaranteed to be internally connected.
 ///
 /// ```
-/// use graphops::leiden::leiden_seeded;
+/// use graphops::leiden::louvain_connected_seeded;
 /// use graphops::GraphRef;
 ///
 /// struct G(Vec<Vec<usize>>);
@@ -43,10 +60,10 @@ pub fn leiden<G: GraphRef>(graph: &G, resolution: f64) -> Vec<usize> {
 ///     vec![1, 2],    vec![0, 2],    vec![0, 1, 3],
 ///     vec![2, 4, 5], vec![3, 5],    vec![3, 4],
 /// ]);
-/// let labels = leiden_seeded(&g, 1.0, 42);
+/// let labels = louvain_connected_seeded(&g, 1.0, 42);
 /// assert_eq!(labels.len(), 6);
 /// ```
-pub fn leiden_seeded<G: GraphRef>(graph: &G, resolution: f64, seed: u64) -> Vec<usize> {
+pub fn louvain_connected_seeded<G: GraphRef>(graph: &G, resolution: f64, seed: u64) -> Vec<usize> {
     use rand::{rngs::StdRng, SeedableRng};
 
     let n = graph.node_count();
@@ -79,8 +96,7 @@ pub fn leiden_seeded<G: GraphRef>(graph: &G, resolution: f64, seed: u64) -> Vec<
             break;
         }
 
-        // Refinement: ensure each community is internally connected.
-        let refined = refinement_phase(&adj, &community);
+        let refined = connectivity_split_phase(&adj, &community);
 
         let num_communities = *refined.iter().max().unwrap() + 1;
         if num_communities == cn {
@@ -124,16 +140,34 @@ pub fn leiden_seeded<G: GraphRef>(graph: &G, resolution: f64, seed: u64) -> Vec<
     labels
 }
 
-/// Run Leiden community detection on a weighted graph with default seed (0).
+/// Legacy compatibility name for [`louvain_connected_weighted`].
+///
+/// This routine does not implement Leiden's constrained-merge refinement.
 pub fn leiden_weighted<G: WeightedGraph>(graph: &G, resolution: f64) -> Vec<usize> {
-    leiden_weighted_seeded(graph, resolution, 0)
+    louvain_connected_weighted(graph, resolution)
 }
 
-/// Run Leiden community detection on a weighted graph with explicit seed.
+/// Run weighted connectivity-refined Louvain with default seed (0).
+pub fn louvain_connected_weighted<G: WeightedGraph>(graph: &G, resolution: f64) -> Vec<usize> {
+    louvain_connected_weighted_seeded(graph, resolution, 0)
+}
+
+/// Legacy compatibility name for [`louvain_connected_weighted_seeded`].
+///
+/// This routine does not implement Leiden's constrained-merge refinement.
+pub fn leiden_weighted_seeded<G: WeightedGraph>(
+    graph: &G,
+    resolution: f64,
+    seed: u64,
+) -> Vec<usize> {
+    louvain_connected_weighted_seeded(graph, resolution, seed)
+}
+
+/// Run weighted connectivity-refined Louvain with an explicit seed.
 ///
 /// Uses `graph.edge_weight(u, v)` instead of treating all edges as weight 1.0.
 /// All communities are guaranteed to be internally connected.
-pub fn leiden_weighted_seeded<G: WeightedGraph>(
+pub fn louvain_connected_weighted_seeded<G: WeightedGraph>(
     graph: &G,
     resolution: f64,
     seed: u64,
@@ -169,7 +203,7 @@ pub fn leiden_weighted_seeded<G: WeightedGraph>(
             break;
         }
 
-        let refined = refinement_phase(&adj, &community);
+        let refined = connectivity_split_phase(&adj, &community);
 
         let num_communities = *refined.iter().max().unwrap() + 1;
         if num_communities == cn {
@@ -288,9 +322,8 @@ fn local_move_phase(
     (any_moved, community)
 }
 
-/// Refinement phase: within each community, find connected components and split
-/// disconnected ones into separate communities.
-fn refinement_phase(adj: &[Vec<(usize, f64)>], community: &[usize]) -> Vec<usize> {
+/// Split disconnected components within each community.
+fn connectivity_split_phase(adj: &[Vec<(usize, f64)>], community: &[usize]) -> Vec<usize> {
     let num_communities = *community.iter().max().unwrap_or(&0) + 1;
 
     // Group nodes by community.
@@ -440,9 +473,9 @@ mod tests {
     }
 
     #[test]
-    fn leiden_two_cliques_finds_two_communities() {
+    fn connected_louvain_two_cliques_finds_two_communities() {
         let g = two_cliques();
-        let labels = leiden_seeded(&g, 1.0, 42);
+        let labels = louvain_connected_seeded(&g, 1.0, 42);
         assert_eq!(labels.len(), 8);
         assert_eq!(labels[0], labels[1]);
         assert_eq!(labels[0], labels[2]);
@@ -454,42 +487,68 @@ mod tests {
     }
 
     #[test]
-    fn leiden_beats_louvain_modularity() {
+    fn connected_louvain_has_positive_modularity() {
         let g = two_cliques();
-        let labels = leiden_seeded(&g, 1.0, 42);
+        let labels = louvain_connected_seeded(&g, 1.0, 42);
         let q = crate::louvain::modularity(&g, &labels);
-        assert!(q > 0.0, "Leiden modularity = {q}, expected positive");
+        assert!(q > 0.0, "modularity = {q}, expected positive");
     }
 
     #[test]
-    fn leiden_empty_graph() {
+    fn connected_louvain_empty_graph() {
         let g = VecGraph { adj: vec![] };
-        let labels = leiden_seeded(&g, 1.0, 0);
+        let labels = louvain_connected_seeded(&g, 1.0, 0);
         assert!(labels.is_empty());
     }
 
     #[test]
-    fn leiden_single_node() {
+    fn connected_louvain_single_node() {
         let g = VecGraph { adj: vec![vec![]] };
-        let labels = leiden_seeded(&g, 1.0, 0);
+        let labels = louvain_connected_seeded(&g, 1.0, 0);
         assert_eq!(labels, vec![0]);
     }
 
     #[test]
-    fn leiden_is_deterministic_with_seed() {
+    fn connected_louvain_is_deterministic_with_seed() {
         let g = two_cliques();
-        let a = leiden_seeded(&g, 1.0, 99);
-        let b = leiden_seeded(&g, 1.0, 99);
+        let a = louvain_connected_seeded(&g, 1.0, 99);
+        let b = louvain_connected_seeded(&g, 1.0, 99);
         assert_eq!(a, b);
     }
 
     #[test]
-    fn leiden_disconnected_components_separated() {
+    fn frozen_leidenalg_counterexample_documents_semantic_boundary() {
+        let g = VecGraph {
+            adj: vec![
+                vec![4],
+                vec![2, 3, 4],
+                vec![1, 3, 4],
+                vec![1, 2, 5],
+                vec![0, 1, 2],
+                vec![3],
+            ],
+        };
+        let labels = louvain_connected_seeded(&g, 1.0, 42);
+
+        // Frozen oracle: leidenalg 0.12.0 + igraph 1.0.0,
+        // RBConfigurationVertexPartition, resolution=1, seed=42,
+        // n_iterations=-1 returns {0,4} and {1,2,3,5}.
+        let leiden_oracle = [1, 0, 0, 0, 1, 0];
+        assert_eq!(labels, [0, 1, 1, 2, 0, 2]);
+        assert!(!same_partition(&labels, &leiden_oracle));
+    }
+
+    fn same_partition(a: &[usize], b: &[usize]) -> bool {
+        (0..a.len()).all(|i| (0..a.len()).all(|j| (a[i] == a[j]) == (b[i] == b[j])))
+    }
+
+    #[test]
+    fn connected_louvain_disconnected_components_separated() {
         // Three disconnected edges: {0,1}, {2,3}, {4,5}
         let g = VecGraph {
             adj: vec![vec![1], vec![0], vec![3], vec![2], vec![5], vec![4]],
         };
-        let labels = leiden_seeded(&g, 1.0, 0);
+        let labels = louvain_connected_seeded(&g, 1.0, 0);
         assert_eq!(labels[0], labels[1]);
         assert_eq!(labels[2], labels[3]);
         assert_eq!(labels[4], labels[5]);
@@ -500,7 +559,7 @@ mod tests {
     }
 
     #[test]
-    fn leiden_communities_are_internally_connected() {
+    fn connected_louvain_communities_are_internally_connected() {
         // Key property: every community must be a connected subgraph.
         // Chain with cross-links to create non-trivial partitions.
         let g = VecGraph {
@@ -518,7 +577,7 @@ mod tests {
                 vec![8, 9],     // 10
             ],
         };
-        let labels = leiden_seeded(&g, 1.0, 42);
+        let labels = louvain_connected_seeded(&g, 1.0, 42);
 
         // Group nodes by community.
         let num_comms = *labels.iter().max().unwrap() + 1;
@@ -558,7 +617,7 @@ mod tests {
     }
 
     #[test]
-    fn leiden_weighted_two_cliques_finds_two_communities() {
+    fn connected_louvain_weighted_two_cliques_finds_two_communities() {
         // Two 4-cliques connected by a weak bridge (weight 0.1 vs intra-clique 1.0).
         // Nodes 0-3 form clique A; nodes 4-7 form clique B; bridge: 3-4 (weight 0.1).
         let n = 8;
@@ -583,7 +642,7 @@ mod tests {
         w[4][3] = 0.1;
 
         let g = WeightedVecGraph { weights: w };
-        let labels = leiden_weighted_seeded(&g, 1.0, 42);
+        let labels = louvain_connected_weighted_seeded(&g, 1.0, 42);
         assert_eq!(labels.len(), 8);
         assert_eq!(labels[0], labels[1]);
         assert_eq!(labels[0], labels[2]);
@@ -595,7 +654,7 @@ mod tests {
     }
 
     #[test]
-    fn leiden_weighted_different_weights_can_differ_from_unweighted() {
+    fn connected_louvain_weighted_respects_edge_weights() {
         // Verify that edge weights actually affect the output.
         // Build a graph where unweighted Leiden and weighted Leiden (with asymmetric weights)
         // can produce different community counts.
@@ -622,7 +681,7 @@ mod tests {
         w[5][0] = 0.1;
 
         let g = WeightedVecGraph { weights: w };
-        let labels = leiden_weighted_seeded(&g, 1.0, 42);
+        let labels = louvain_connected_weighted_seeded(&g, 1.0, 42);
         assert_eq!(labels.len(), 6);
         // Nodes within each triangle must be in the same community.
         assert_eq!(labels[0], labels[1]);
@@ -634,7 +693,7 @@ mod tests {
     }
 
     #[test]
-    fn leiden_weighted_seeded_is_deterministic() {
+    fn connected_louvain_weighted_seeded_is_deterministic() {
         let n = 8;
         let mut w = vec![vec![0.0f64; n]; n];
         for u in 0..4usize {
@@ -654,8 +713,8 @@ mod tests {
         w[3][4] = 0.5;
         w[4][3] = 0.5;
         let g = WeightedVecGraph { weights: w };
-        let a = leiden_weighted_seeded(&g, 1.0, 77);
-        let b = leiden_weighted_seeded(&g, 1.0, 77);
+        let a = louvain_connected_weighted_seeded(&g, 1.0, 77);
+        let b = louvain_connected_weighted_seeded(&g, 1.0, 77);
         assert_eq!(a, b);
     }
 }

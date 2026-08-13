@@ -75,11 +75,16 @@ pub use katz::{
     katz_centrality, katz_centrality_checked, katz_centrality_run, KatzConfig, KatzRun,
 };
 pub use leiden::{leiden, leiden_seeded, leiden_weighted, leiden_weighted_seeded};
+pub use leiden::{
+    louvain_connected, louvain_connected_seeded, louvain_connected_weighted,
+    louvain_connected_weighted_seeded,
+};
 pub use louvain::{louvain, louvain_seeded, louvain_weighted, louvain_weighted_seeded};
 pub use pagerank::{pagerank, pagerank_weighted, PageRankConfig};
 pub use pagerank::{pagerank_checked, pagerank_weighted_checked};
 pub use pagerank::{
-    pagerank_checked_run, pagerank_run, pagerank_weighted_checked_run, pagerank_weighted_run,
+    pagerank_checked_run, pagerank_ref, pagerank_ref_checked, pagerank_ref_checked_run,
+    pagerank_ref_run, pagerank_run, pagerank_weighted_checked_run, pagerank_weighted_run,
     PageRankRun,
 };
 pub use partition::{
