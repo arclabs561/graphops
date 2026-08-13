@@ -6,7 +6,7 @@ Graph algorithms and node embeddings.
 
 ```toml
 [dependencies]
-graphops = "0.5.0"
+graphops = "0.5.1"
 ```
 
 ## PageRank
