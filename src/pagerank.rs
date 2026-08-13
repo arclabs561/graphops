@@ -428,6 +428,55 @@ mod tests {
     }
 
     #[test]
+    fn pagerank_ref_checked_entrypoints_reject_invalid_config() {
+        let graph = RefGraph(vec![vec![1], vec![0]]);
+        let invalid = PageRankConfig {
+            max_iterations: 0,
+            ..PageRankConfig::default()
+        };
+
+        assert!(pagerank_ref_checked(&graph, invalid).is_err());
+        assert!(pagerank_ref_checked_run(&graph, invalid).is_err());
+    }
+
+    #[test]
+    fn pagerank_ref_checked_entrypoints_match_unchecked_and_owned_paths_exactly() {
+        let adjacency = vec![vec![1, 2], vec![2], vec![0], vec![]];
+        let borrowed = RefGraph(adjacency.clone());
+
+        struct Owned(Vec<Vec<usize>>);
+        impl Graph for Owned {
+            fn node_count(&self) -> usize {
+                self.0.len()
+            }
+            fn neighbors(&self, node: usize) -> Vec<usize> {
+                self.0[node].clone()
+            }
+        }
+
+        let config = PageRankConfig {
+            tolerance: 1e-12,
+            ..PageRankConfig::default()
+        };
+        let unchecked = pagerank_ref_run(&borrowed, config);
+        let checked_scores = pagerank_ref_checked(&borrowed, config).unwrap();
+        let checked_run = pagerank_ref_checked_run(&borrowed, config).unwrap();
+        let owned_scores = pagerank_checked(&Owned(adjacency.clone()), config).unwrap();
+        let owned_run = pagerank_checked_run(&Owned(adjacency), config).unwrap();
+
+        assert_eq!(checked_scores, unchecked.scores);
+        assert_eq!(checked_scores, owned_scores);
+        assert_eq!(checked_run.scores, unchecked.scores);
+        assert_eq!(checked_run.iterations, unchecked.iterations);
+        assert_eq!(checked_run.diff_l1, unchecked.diff_l1);
+        assert_eq!(checked_run.converged, unchecked.converged);
+        assert_eq!(checked_run.scores, owned_run.scores);
+        assert_eq!(checked_run.iterations, owned_run.iterations);
+        assert_eq!(checked_run.diff_l1, owned_run.diff_l1);
+        assert_eq!(checked_run.converged, owned_run.converged);
+    }
+
+    #[test]
     fn weighted_checked_run_executes_solver_once() {
         struct CountedWeighted {
             adjacency: Vec<Vec<usize>>,
