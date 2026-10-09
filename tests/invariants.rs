@@ -115,3 +115,48 @@ mod petgraph_multigraph {
         }
     }
 }
+
+/// node2vec second-order transitions (Grover & Leskovec 2016, Sec. 3.2.2):
+/// after stepping t -> v, the next node x is chosen with weight 1/p if x == t,
+/// 1 if x is adjacent to t, and 1/q otherwise.
+#[test]
+fn node2vec_second_step_frequencies_match_the_paper_weights() {
+    use graphops::{generate_biased_walks_from_nodes, AdjacencyMatrix, WalkConfig};
+
+    // Edges 0-1, 0-2, 1-2, 1-3. From t = 0, v = 1: x = 0 returns, x = 2 is
+    // adjacent to t, x = 3 is not.
+    let adj = vec![
+        vec![0.0, 1.0, 1.0, 0.0],
+        vec![1.0, 0.0, 1.0, 1.0],
+        vec![1.0, 1.0, 0.0, 0.0],
+        vec![0.0, 1.0, 0.0, 0.0],
+    ];
+    let (p, q) = (2.0_f32, 0.5_f32);
+    let config = WalkConfig {
+        length: 3,
+        walks_per_node: 40_000,
+        p,
+        q,
+        seed: 11,
+    };
+    let walks = generate_biased_walks_from_nodes(&AdjacencyMatrix(&adj), &[0], config);
+
+    let mut counts = [0usize; 4];
+    for w in walks.iter().filter(|w| w.len() == 3 && w[1] == 1) {
+        counts[w[2]] += 1;
+    }
+    let total: usize = counts.iter().sum();
+    assert!(total > 10_000, "too few t=0, v=1 walks: {total}");
+
+    let weights = [1.0 / p as f64, 0.0, 1.0, 1.0 / q as f64];
+    let z: f64 = weights.iter().sum();
+    for x in [0, 2, 3] {
+        let observed = counts[x] as f64 / total as f64;
+        let expected = weights[x] / z;
+        assert!(
+            (observed - expected).abs() < 0.02,
+            "x={x}: observed {observed:.4}, expected {expected:.4}"
+        );
+    }
+    assert_eq!(counts[1], 0);
+}

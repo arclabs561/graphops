@@ -16,6 +16,11 @@
 //! - convergence details (so long as tolerance semantics remain correct)
 //! - internal data structures (so long as invariants hold)
 
+// Compile and run the README's Rust examples as doctests.
+#[cfg(doctest)]
+#[doc = include_str!("../README.md")]
+pub struct ReadmeDoctests;
+
 pub mod betweenness;
 pub mod centrality;
 pub mod eigenvector;
