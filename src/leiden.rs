@@ -281,8 +281,12 @@ fn local_move_phase(
             let k_u = k[u];
 
             let mut comm_weights: HashMap<usize, f64> = HashMap::new();
+            // Skip u's self-loop: after aggregation it holds the community's
+            // internal weight, which moves with u and is not a link to cu.
             for &(v, w) in &adj[u] {
-                *comm_weights.entry(community[v]).or_insert(0.0) += w;
+                if v != u {
+                    *comm_weights.entry(community[v]).or_insert(0.0) += w;
+                }
             }
 
             let k_u_cu = comm_weights.get(&cu).copied().unwrap_or(0.0);
@@ -535,7 +539,13 @@ mod tests {
         // RBConfigurationVertexPartition, resolution=1, seed=42,
         // n_iterations=-1 returns {0,4} and {1,2,3,5}.
         let leiden_oracle = [1, 0, 0, 0, 1, 0];
-        assert_eq!(labels, [0, 1, 1, 2, 0, 2]);
+        // {0,1,2,4} {3,5}: the same modularity as the oracle (6/49) through a
+        // different partition. Before the aggregation phase stopped counting
+        // a super-node's self-loop as a link to its own community, this
+        // returned {0,4} {1,2} {3,5} (modularity 4/49).
+        assert_eq!(labels, [0, 0, 0, 1, 0, 1]);
+        assert!((crate::louvain::modularity(&g, &labels) - 6.0 / 49.0).abs() < 1e-12);
+        assert!((crate::louvain::modularity(&g, &leiden_oracle) - 6.0 / 49.0).abs() < 1e-12);
         assert!(!same_partition(&labels, &leiden_oracle));
     }
 

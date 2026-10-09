@@ -313,8 +313,12 @@ fn local_move_phase(
 
             // Compute weights from u to each neighboring community.
             let mut comm_weights: HashMap<usize, f64> = HashMap::new();
+            // Skip u's self-loop: after aggregation it holds the community's
+            // internal weight, which moves with u and is not a link to cu.
             for &(v, w) in &adj[u] {
-                *comm_weights.entry(community[v]).or_insert(0.0) += w;
+                if v != u {
+                    *comm_weights.entry(community[v]).or_insert(0.0) += w;
+                }
             }
 
             // Modularity gain of removing u from cu.
