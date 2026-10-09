@@ -79,3 +79,39 @@ fn reachability_counts_edges_matches_toy_graph() {
     assert_eq!(dependencies, vec![2, 1, 0]);
     assert_eq!(dependents, vec![0, 1, 2]);
 }
+
+#[cfg(feature = "petgraph")]
+mod petgraph_multigraph {
+    use graphops::{pagerank_weighted, PageRankConfig};
+    use petgraph::prelude::*;
+
+    /// Parallel edges a->b (1.0, 2.0) must act as one edge of weight 3.0.
+    #[test]
+    fn weighted_pagerank_sums_parallel_edge_weights() {
+        let mut multi: DiGraph<(), f64> = DiGraph::new();
+        let (a, b, c) = (multi.add_node(()), multi.add_node(()), multi.add_node(()));
+        multi.add_edge(a, b, 1.0);
+        multi.add_edge(a, b, 2.0);
+        multi.add_edge(a, c, 1.0);
+        multi.add_edge(b, a, 1.0);
+        multi.add_edge(c, a, 1.0);
+
+        let mut simple: DiGraph<(), f64> = DiGraph::new();
+        let (a, b, c) = (
+            simple.add_node(()),
+            simple.add_node(()),
+            simple.add_node(()),
+        );
+        simple.add_edge(a, b, 3.0);
+        simple.add_edge(a, c, 1.0);
+        simple.add_edge(b, a, 1.0);
+        simple.add_edge(c, a, 1.0);
+
+        let cfg = PageRankConfig::default();
+        let m = pagerank_weighted(&multi, cfg);
+        let s = pagerank_weighted(&simple, cfg);
+        for (x, y) in m.iter().zip(&s) {
+            assert!((x - y).abs() < 1e-9, "multi={m:?} simple={s:?}");
+        }
+    }
+}

@@ -205,8 +205,8 @@ where
     fn edge_weight(&self, source: usize, target: usize) -> f64 {
         let s = petgraph::graph::NodeIndex::new(source);
         let t = petgraph::graph::NodeIndex::new(target);
-        self.find_edge(s, t)
-            .map(|e| *self.edge_weight(e).unwrap_or(&0.0))
-            .unwrap_or(0.0)
+        // Parallel edges act as one edge whose weight is their sum, so weighted
+        // algorithms must visit each distinct neighbor once.
+        self.edges_connecting(s, t).map(|e| *e.weight()).sum()
     }
 }

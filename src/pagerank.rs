@@ -265,7 +265,15 @@ pub fn pagerank_weighted_run<G: WeightedGraph>(graph: &G, config: PageRankConfig
     let mut new_scores = vec![0.0; n];
 
     // Precompute outgoing neighbors once (Graph) and outgoing weight sums (WeightedGraph).
-    let neighbors: Vec<Vec<usize>> = (0..n).map(|u| graph.neighbors(u)).collect();
+    // Distinct targets only: `edge_weight` already aggregates parallel edges.
+    let neighbors: Vec<Vec<usize>> = (0..n)
+        .map(|u| {
+            let mut nb = graph.neighbors(u);
+            nb.sort_unstable();
+            nb.dedup();
+            nb
+        })
+        .collect();
     let out_wsum: Vec<f64> = (0..n)
         .map(|u| {
             neighbors[u]

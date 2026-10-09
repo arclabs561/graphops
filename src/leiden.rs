@@ -182,9 +182,10 @@ pub fn louvain_connected_weighted_seeded<G: WeightedGraph>(
     // Build initial weighted adjacency using actual edge weights.
     let mut adj: Vec<Vec<(usize, f64)>> = (0..n)
         .map(|u| {
-            graph
-                .neighbors(u)
-                .into_iter()
+            let mut nb = graph.neighbors(u);
+            nb.sort_unstable();
+            nb.dedup();
+            nb.into_iter()
                 .filter(|&v| v < n)
                 .map(|v| (v, graph.edge_weight(u, v)))
                 .collect()
