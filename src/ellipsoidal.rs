@@ -98,7 +98,7 @@ pub fn ellipsoidal_embedding<G: Graph>(graph: &G, config: &EllipsoidalConfig) ->
 
     // Sort eigenvalues ascending; skip the smallest (zero / near-zero) eigenvalue.
     let mut order: Vec<usize> = (0..n).collect();
-    order.sort_by(|&a, &b| eigenvalues[a].partial_cmp(&eigenvalues[b]).unwrap());
+    order.sort_by(|&a, &b| eigenvalues[a].total_cmp(&eigenvalues[b]));
 
     // Take eigenvectors 1..=dim (skip index 0, the trivial constant eigenvector).
     let selected: Vec<usize> = order[1..=dim].to_vec();

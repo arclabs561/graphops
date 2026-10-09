@@ -75,7 +75,7 @@ fn main() {
     }
 
     // Sort by overlap (descending = most likely link).
-    predictions.sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap());
+    predictions.sort_by(|a, b| b.2.total_cmp(&a.2));
 
     println!("Top predicted links (by ellipsoid overlap):");
     for &(i, j, score) in predictions.iter().take(5) {

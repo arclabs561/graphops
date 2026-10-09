@@ -37,7 +37,7 @@ pub fn top_k(scores: &[f64], k: usize) -> Vec<(usize, f64)> {
         .into_iter()
         .map(|Reverse((s, i))| (i, s.into_inner()))
         .collect();
-    results.sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+    results.sort_unstable_by(|a, b| b.1.total_cmp(&a.1));
     results
 }
 

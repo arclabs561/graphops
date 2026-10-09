@@ -39,7 +39,7 @@ fn main() {
     let max_node = scores
         .iter()
         .enumerate()
-        .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
+        .max_by(|a, b| a.1.total_cmp(b.1))
         .unwrap();
     println!(
         "Highest-ranked node: {} ({}) with score {:.6}",

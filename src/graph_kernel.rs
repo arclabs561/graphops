@@ -305,8 +305,8 @@ fn sliced_wasserstein_distance(
         let mut proj1: Vec<f64> = features1.iter().map(|f| dot(f, &direction)).collect();
         let mut proj2: Vec<f64> = features2.iter().map(|f| dot(f, &direction)).collect();
 
-        proj1.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap());
-        proj2.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap());
+        proj1.sort_unstable_by(f64::total_cmp);
+        proj2.sort_unstable_by(f64::total_cmp);
 
         total_dist += wasserstein_1d(&proj1, &proj2);
     }
@@ -348,7 +348,7 @@ fn wasserstein_1d(sorted1: &[f64], sorted2: &[f64]) -> f64 {
     for k in 1..=m {
         breaks.push(k as f64 / m_f);
     }
-    breaks.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap());
+    breaks.sort_unstable_by(f64::total_cmp);
     breaks.dedup_by(|a, b| (*a - *b).abs() < 1e-15);
 
     let mut integral = 0.0;
@@ -454,6 +454,16 @@ pub fn structural_node_features(adj: &[Vec<usize>]) -> Vec<Vec<f64>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// NaN in a feature must not panic the projection sort (Rust >= 1.81
+    /// sorts can panic on a non-total comparator).
+    #[test]
+    fn sliced_wasserstein_with_nan_feature_does_not_panic() {
+        let f1 = vec![vec![1.0, 0.0], vec![f64::NAN, 2.0], vec![0.5, 0.5]];
+        let f2 = vec![vec![0.0, 1.0], vec![2.0, 2.0]];
+        let k = sliced_wasserstein_graph_kernel(&f1, &f2, 8, 1.0, 7);
+        assert!(k.is_nan() || (0.0..=1.0).contains(&k));
+    }
 
     // =========================================================================
     // WL Subtree Kernel
