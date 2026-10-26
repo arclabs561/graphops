@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.5.2] - 2026-10-26
+
+### Fixed
+
+- Louvain and connected Louvain no longer count a super-node's own self-loop
+  as a link to its community. After the first aggregation no node could move,
+  so results stopped at the level-1 partition; on Zachary's karate club,
+  modularity rises from 0.335 (7 communities) to the networkx range
+  (0.415 to 0.420, 4 communities).
+- The weighted petgraph adapter sums the weights of parallel edges instead of
+  counting the first one several times, and Louvain, connected Louvain and
+  weighted PageRank count each neighbour pair once.
+- Sorting uses `total_cmp`, so a NaN score or feature no longer panics in
+  `sliced_wasserstein_graph_kernel`.
+
 ## [0.5.1] - 2026-08-13
 
 ### Added
