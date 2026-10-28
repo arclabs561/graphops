@@ -2,6 +2,12 @@
 
 Graph algorithms and node embeddings.
 
+## Overview
+
+Rank nodes, sample walks, or group nodes into communities. The examples below
+show the graph representation that each algorithm accepts. See the
+[API documentation](https://docs.rs/graphops) for the full set of algorithms.
+
 ## Install
 
 ```toml
@@ -27,7 +33,7 @@ assert!((scores.iter().sum::<f64>() - 1.0).abs() < 1e-9);
 ```
 
 PageRank, weighted PageRank and Brandes betweenness are checked against
-networkx outputs in `tests/rosetta_graphops*.rs`.
+NetworkX outputs in `tests/rosetta_graphops*.rs`.
 
 ## Personalized PageRank
 

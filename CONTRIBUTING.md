@@ -1,7 +1,5 @@
 # Contributing to graphops
 
-Thanks for your interest. graphops is graph operators: PageRank/PPR/walks/reachability/node2vec/betweenness.
-
 ## Before you start
 
 For non-trivial work (new APIs, features, large refactors), open an issue first to align on scope. Drive-by bug fixes and doc patches don't need an issue.
