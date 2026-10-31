@@ -12,7 +12,7 @@ show the graph representation that each algorithm accepts. See the
 
 ```toml
 [dependencies]
-graphops = "0.5.1"
+graphops = "0.5.3"
 ```
 
 ## PageRank
@@ -99,8 +99,7 @@ assert_ne!(labels[0], labels[3]);
 community it returns is connected (`leiden` is an older name for it; it does not
 implement Leiden's refinement phase).
 
-See the [API documentation](https://docs.rs/graphops) for the available
-algorithms and [`examples/`](examples/README.md) for runnable programs.
+Runnable programs are in [`examples/`](examples/README.md).
 
 ## Features
 
