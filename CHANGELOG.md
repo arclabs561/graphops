@@ -2,7 +2,18 @@
 
 ## [Unreleased]
 
+### Added
+
+- `WeightedGraph::stored_weights(node)`, a defaulted method that yields every
+  stored outgoing weight of a node. The default reads `edge_weight` for each
+  entry of `neighbors`; `AdjacencyMatrix` overrides it to return the full row.
+
 ### Fixed
+
+- `pagerank_weighted_checked` and `pagerank_weighted_checked_run` now reject
+  negative and NaN weights in an `AdjacencyMatrix`. The validator walked
+  `neighbors`, which keeps only `w > 0.0`, so those entries were never seen
+  and the call succeeded. Other algorithms are unchanged.
 
 - `clustering_coefficients` and `global_clustering_coefficient` ignore
   self-loops, as networkx does. A self-loop counted toward the degree, so a
