@@ -69,6 +69,19 @@ pub trait WeightedGraph: Graph {
     /// absent — callers treat zero as "no edge", not as a zero-probability
     /// edge, to keep random-walk transition matrices well-defined.
     fn edge_weight(&self, source: usize, target: usize) -> f64;
+
+    /// Every stored outgoing weight of `node`, including entries that
+    /// [`Graph::neighbors`] filters out (negative, NaN). Used by
+    /// `pagerank_weighted_checked` to validate input.
+    ///
+    /// The default yields `edge_weight(node, v)` for each `v` in
+    /// `neighbors(node)`. Override it when `neighbors` hides stored entries.
+    fn stored_weights(&self, node: usize) -> Vec<f64> {
+        self.neighbors(node)
+            .into_iter()
+            .map(|v| self.edge_weight(node, v))
+            .collect()
+    }
 }
 
 /// Weighted graph view returning **borrowed** `(neighbors, weights)` slice pairs.
@@ -138,6 +151,11 @@ impl<'a> Graph for AdjacencyMatrix<'a> {
 impl<'a> WeightedGraph for AdjacencyMatrix<'a> {
     fn edge_weight(&self, source: usize, target: usize) -> f64 {
         self.0[source][target]
+    }
+
+    /// The full row, so negative and NaN entries are visible to validation.
+    fn stored_weights(&self, node: usize) -> Vec<f64> {
+        self.0[node].clone()
     }
 }
 

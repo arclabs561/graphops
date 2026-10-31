@@ -353,8 +353,7 @@ pub fn pagerank_weighted_checked<G: WeightedGraph>(
 fn validate_weights<G: WeightedGraph>(graph: &G) -> Result<()> {
     let n = graph.node_count();
     for u in 0..n {
-        for v in graph.neighbors(u) {
-            let w = graph.edge_weight(u, v);
+        for w in graph.stored_weights(u) {
             if !w.is_finite() {
                 return Err(Error::InvalidParameter(
                     "edge weights must be finite".to_string(),
@@ -597,5 +596,30 @@ mod tests {
             let res = pagerank_weighted_checked(&g, PageRankConfig::default());
             prop_assert!(res.is_err());
         }
+    }
+
+    #[test]
+    fn weighted_checked_rejects_negative_and_nan_in_adjacency_matrix() {
+        // `AdjacencyMatrix::neighbors` keeps only positive entries, so the
+        // validator must read the full row to see these.
+        let negative = vec![
+            vec![0.0, 1.0, -1.0],
+            vec![0.0, 0.0, 1.0],
+            vec![1.0, 0.0, 0.0],
+        ];
+        let nan = vec![
+            vec![0.0, 1.0, f64::NAN],
+            vec![0.0, 0.0, 1.0],
+            vec![1.0, 0.0, 0.0],
+        ];
+        let config = PageRankConfig::default();
+        assert!(pagerank_weighted_checked(&AdjacencyMatrix(&negative), config).is_err());
+        assert!(pagerank_weighted_checked_run(&AdjacencyMatrix(&nan), config).is_err());
+        let ok = vec![
+            vec![0.0, 1.0, 0.0],
+            vec![0.0, 0.0, 1.0],
+            vec![1.0, 0.0, 0.0],
+        ];
+        assert!(pagerank_weighted_checked(&AdjacencyMatrix(&ok), config).is_ok());
     }
 }
