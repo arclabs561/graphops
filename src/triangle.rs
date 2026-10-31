@@ -120,6 +120,7 @@ fn node_triangle_counts<G: Graph>(graph: &G) -> Vec<usize> {
 /// Local clustering coefficient for each node.
 ///
 /// `C(v) = 2 * triangles(v) / (deg(v) * (deg(v) - 1))`, or 0.0 if `deg < 2`.
+/// Self-loops are ignored and do not count toward `deg(v)`, as in networkx.
 ///
 /// ```
 /// use graphops::graph::Graph;
@@ -147,7 +148,7 @@ pub fn clustering_coefficients<G: Graph>(graph: &G) -> Vec<f64> {
     (0..n)
         .map(|u| {
             let mut nbrs = graph.neighbors(u);
-            nbrs.retain(|&v| v < n);
+            nbrs.retain(|&v| v < n && v != u);
             nbrs.sort_unstable();
             nbrs.dedup();
             let deg = nbrs.len();
@@ -163,7 +164,7 @@ pub fn clustering_coefficients<G: Graph>(graph: &G) -> Vec<f64> {
 /// Global clustering coefficient: `3 * triangles / connected_triples`.
 ///
 /// A connected triple is a path of length 2 (three nodes, two edges).
-/// Returns 0.0 if there are no connected triples.
+/// Returns 0.0 if there are no connected triples. Self-loops are ignored.
 pub fn global_clustering_coefficient<G: Graph>(graph: &G) -> f64 {
     let n = graph.node_count();
     let triangles = triangle_count(graph);
@@ -171,7 +172,7 @@ pub fn global_clustering_coefficient<G: Graph>(graph: &G) -> f64 {
     let mut triples = 0usize;
     for u in 0..n {
         let mut nbrs = graph.neighbors(u);
-        nbrs.retain(|&v| v < n);
+        nbrs.retain(|&v| v < n && v != u);
         nbrs.sort_unstable();
         nbrs.dedup();
         let d = nbrs.len();
@@ -279,5 +280,18 @@ mod tests {
     fn global_clustering_path_is_zero() {
         let g = G(vec![vec![1], vec![0, 2], vec![1]]);
         assert_eq!(global_clustering_coefficient(&g), 0.0);
+    }
+
+    #[test]
+    fn clustering_ignores_self_loops() {
+        // Triangle 0-1-2 with a self-loop on 0. networkx `clustering` and
+        // `transitivity` ignore self-loops: both give 1.0 here.
+        let g = G(vec![vec![0, 1, 2], vec![0, 2], vec![0, 1]]);
+        let cc = clustering_coefficients(&g);
+        for &c in &cc {
+            assert!((c - 1.0).abs() < 1e-12, "expected 1.0, got {cc:?}");
+        }
+        let gc = global_clustering_coefficient(&g);
+        assert!((gc - 1.0).abs() < 1e-12, "expected 1.0, got {gc}");
     }
 }

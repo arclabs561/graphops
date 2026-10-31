@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- `clustering_coefficients` and `global_clustering_coefficient` ignore
+  self-loops, as networkx does. A self-loop counted toward the degree, so a
+  triangle with a self-loop on node 0 gave C(0) = 1/3 instead of 1.
+
 ## [0.5.3] - 2026-10-30
 
 ### Fixed
