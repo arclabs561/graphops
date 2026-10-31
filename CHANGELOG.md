@@ -1,5 +1,18 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- `newman_betweenness` solves each source-sink pair by conjugate gradient
+  instead of Jacobi iteration. Jacobi needed O(n^2) sweeps on a path, so the
+  default 200 iterations stopped early on a 40-node path and returned
+  unconverged scores. `max_iter` now caps CG iterations.
+- `newman_betweenness` pins one node per connected component instead of only
+  node n - 1, and pairs in different components contribute 0. Two disjoint
+  identical triangles previously scored 0.333, 0.383 and 0.433 instead of
+  equal values.
+
 ## [0.5.2] - 2026-10-26
 
 ### Fixed
