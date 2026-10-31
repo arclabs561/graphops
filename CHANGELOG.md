@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.5.3] - 2026-10-30
+
 ### Fixed
 
 - `newman_betweenness` solves each source-sink pair by conjugate gradient
