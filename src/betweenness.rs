@@ -104,10 +104,12 @@ pub struct NewmanBetweennessConfig {
     pub n_sources: usize,
     /// RNG seed used to draw the source sample when `n_sources < n`.
     pub seed: u64,
-    /// Maximum Jacobi iterations per linear solve.  Each solve advances the
-    /// current-flow potential on a single source–sink pair.
+    /// Maximum conjugate-gradient iterations per linear solve.  Each solve
+    /// computes the current-flow potential for a single source–sink pair; on a
+    /// connected component of `m` nodes CG needs at most `m - 1` iterations in
+    /// exact arithmetic.
     pub max_iter: usize,
-    /// L1 convergence threshold for the Jacobi residual.  The solver stops
+    /// L1 convergence threshold for the residual `b - L v`.  The solver stops
     /// early when the residual falls below this value.
     pub tolerance: f64,
 }
@@ -170,9 +172,9 @@ pub struct NewmanBetweennessRun {
 /// # Performance and scaling
 ///
 /// The exact form (default `n_sources = usize::MAX`) iterates over every
-/// `(s, t)` pair and runs one Jacobi linear-solve per pair, costing
-/// approximately `O(n_pairs * max_iter * avg_degree) = O(n^2 * max_iter * d)`
-/// total work.  Practical guidance:
+/// `(s, t)` pair and runs one conjugate-gradient solve per pair, costing
+/// approximately `O(n_pairs * iterations * avg_degree)` total work, with at
+/// most `min(max_iter, n - 1)` iterations per solve.  Practical guidance:
 ///
 /// - **`n <= ~500`**: exact mode is fine.  Sub-second on small graphs.
 /// - **`n` in `~500..10_000`**: set `n_sources` to a fixed sample
@@ -182,8 +184,7 @@ pub struct NewmanBetweennessRun {
 /// - **`n >= 10_000`**: exact mode is impractical (hours).  Always sample.
 ///
 /// `_run` returns convergence diagnostics so callers can detect cases where
-/// the Jacobi solver hit `max_iter` without converging (signals a poorly-
-/// conditioned source–sink pair, often near disconnected components).
+/// the solver hit `max_iter` without converging.
 ///
 /// **Currently no in-tree consumer.** This was added alongside Katz centrality
 /// in graphops 0.4 to round out the centrality offering; the queued sheaf
@@ -198,12 +199,11 @@ pub struct NewmanBetweennessRun {
 ///
 /// where \\(L = D - A\\) is the graph Laplacian (\\(D\\) = degree matrix,
 /// \\(A\\) = adjacency matrix) and \\(b_i = +1\\) at the source, \\(-1\\) at
-/// the sink, \\(0\\) elsewhere.  Because \\(L\\) is singular (rank \\(n-1\\)),
-/// one node is pinned to potential \\(0\\) and its row/column dropped.
-///
-/// The Jacobi update for node \\(i\\) (pinned node excluded) is
-///
-/// \\[ v^{(k+1)}_i = \\frac{b_i + \\sum_{j \\in N(i)} v^{(k)}_j}{d_i} \\]
+/// the sink, \\(0\\) elsewhere.  \\(L\\) is singular once per connected
+/// component, so one node per component is pinned to potential \\(0\\) and its
+/// row/column dropped; the reduced system is symmetric positive definite and
+/// is solved by conjugate gradient.  Pairs in different components carry no
+/// current and contribute 0.
 ///
 /// The edge current on \\((i,j)\\) is \\(|v_i - v_j|\\), and the contribution
 /// to node \\(k\\)'s betweenness is
@@ -271,68 +271,85 @@ pub fn newman_betweenness_run<G: GraphRef>(
     let mut total_iters = 0usize;
     let mut all_converged = true;
 
-    // Pinned node: node n-1 (arbitrary; its row/column is dropped from the
-    // linear system to make it full-rank).
-    let pinned = n - 1;
+    // Pin one node per connected component (the first one reached) so the
+    // reduced Laplacian is positive definite; `component[i]` labels nodes.
+    let mut component = vec![usize::MAX; n];
+    let mut pinned = vec![false; n];
+    let mut stack = Vec::new();
+    for root in 0..n {
+        if component[root] != usize::MAX {
+            continue;
+        }
+        pinned[root] = true;
+        component[root] = root;
+        stack.push(root);
+        while let Some(u) = stack.pop() {
+            for &w in neighbors[u] {
+                if component[w] == usize::MAX {
+                    component[w] = root;
+                    stack.push(w);
+                }
+            }
+        }
+    }
 
-    // Reusable work buffers.
-    let mut v = vec![0.0f64; n]; // current potential
-    let mut v_new = vec![0.0f64; n]; // next-iteration potential
+    // Reusable work buffers for conjugate gradient on L v = b with pinned
+    // entries held at 0.
+    let mut v = vec![0.0f64; n]; // potential
+    let mut r = vec![0.0f64; n]; // residual b - L v
+    let mut p = vec![0.0f64; n]; // search direction
+    let mut lp = vec![0.0f64; n]; // L p
 
     for &s in &sources {
         for t in 0..n {
-            if t == s {
+            if t == s || component[s] != component[t] {
                 continue;
             }
 
-            // Set up RHS: b[s] = +1, b[t] = -1, b[_] = 0.
-            // Jacobi for node i (i != pinned):
-            //   v[i] = (b[i] + sum_{j in N(i)} v[j]) / degree[i]
-            // Pinned node stays at 0 throughout.
-
-            // Warm-start from zero each solve.
             v.fill(0.0);
+            r.fill(0.0);
+            if !pinned[s] {
+                r[s] = 1.0;
+            }
+            if !pinned[t] {
+                r[t] = -1.0;
+            }
+            p.copy_from_slice(&r);
+            let mut rr: f64 = r.iter().map(|x| x * x).sum();
 
             let mut solve_iters = 0usize;
             let mut solve_converged = false;
 
             for _ in 0..config.max_iter {
-                solve_iters += 1;
-                v_new.fill(0.0);
-
-                for i in 0..n {
-                    if i == pinned || degree[i] == 0 {
-                        continue;
-                    }
-                    // b[i]: source injects +1, sink drains -1.
-                    let b_i: f64 = if i == s {
-                        1.0
-                    } else if i == t {
-                        -1.0
-                    } else {
-                        0.0
-                    };
-                    let neighbor_sum: f64 = neighbors[i].iter().map(|&j| v[j]).sum();
-                    v_new[i] = (b_i + neighbor_sum) / degree[i] as f64;
-                }
-                // Pinned node remains 0.
-
-                // L1 residual over non-pinned nodes.
-                #[cfg(feature = "simd")]
-                let residual: f64 = innr::dense_f64::l1_distance_f64(&v, &v_new);
-                #[cfg(not(feature = "simd"))]
-                let residual: f64 = v
-                    .iter()
-                    .zip(v_new.iter())
-                    .map(|(old, new)| (old - new).abs())
-                    .sum();
-
-                std::mem::swap(&mut v, &mut v_new);
-
+                let residual: f64 = r.iter().map(|x| x.abs()).sum();
                 if residual < config.tolerance {
                     solve_converged = true;
                     break;
                 }
+                solve_iters += 1;
+
+                for i in 0..n {
+                    lp[i] = if pinned[i] {
+                        0.0
+                    } else {
+                        degree[i] as f64 * p[i] - neighbors[i].iter().map(|&j| p[j]).sum::<f64>()
+                    };
+                }
+                let p_lp: f64 = p.iter().zip(&lp).map(|(a, b)| a * b).sum();
+                let alpha = rr / p_lp;
+                for i in 0..n {
+                    v[i] += alpha * p[i];
+                    r[i] -= alpha * lp[i];
+                }
+                let rr_new: f64 = r.iter().map(|x| x * x).sum();
+                let beta = rr_new / rr;
+                rr = rr_new;
+                for i in 0..n {
+                    p[i] = r[i] + beta * p[i];
+                }
+            }
+            if !solve_converged {
+                solve_converged = r.iter().map(|x| x.abs()).sum::<f64>() < config.tolerance;
             }
 
             total_iters += solve_iters;
