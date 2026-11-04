@@ -15,6 +15,9 @@ use std::collections::HashMap;
 /// where L_c is internal edges in community c (each undirected edge counted
 /// once), sigma_c is the sum of degrees, and m is the total edge count.
 ///
+/// A self-loop `u` in `neighbors_ref(u)` adds 2 to u's degree and 1 to L_c,
+/// as in networkx.
+///
 /// Returns 0.0 for graphs with no edges.
 pub fn modularity<G: GraphRef>(graph: &G, communities: &[usize]) -> f64 {
     let n = graph.node_count();
@@ -22,9 +25,14 @@ pub fn modularity<G: GraphRef>(graph: &G, communities: &[usize]) -> f64 {
         return 0.0;
     }
 
-    let two_m: f64 = (0..n)
-        .map(|u| graph.neighbors_ref(u).len() as f64)
-        .sum::<f64>();
+    let degree = |u: usize| -> f64 {
+        graph
+            .neighbors_ref(u)
+            .iter()
+            .map(|&v| if v == u { 2.0 } else { 1.0 })
+            .sum()
+    };
+    let two_m: f64 = (0..n).map(degree).sum::<f64>();
 
     if two_m == 0.0 {
         return 0.0;
@@ -37,14 +45,13 @@ pub fn modularity<G: GraphRef>(graph: &G, communities: &[usize]) -> f64 {
 
     for u in 0..n {
         let cu = communities[u];
-        let k_u = graph.neighbors_ref(u).len() as f64;
-        sigma[cu] += k_u;
+        sigma[cu] += degree(u);
         for &v in graph.neighbors_ref(u) {
             if v >= n {
                 continue;
             }
             if communities[v] == cu {
-                twice_l[cu] += 1.0;
+                twice_l[cu] += if v == u { 2.0 } else { 1.0 };
             }
         }
     }
@@ -96,14 +103,15 @@ pub fn louvain_seeded<G: GraphRef>(graph: &G, resolution: f64, seed: u64) -> Vec
         return vec![];
     }
 
-    // Build initial weighted adjacency (unweighted = all 1.0).
+    // Build initial weighted adjacency (unweighted = all 1.0). A self-loop
+    // gets weight 2, the convention aggregation uses for internal edges.
     let mut adj: Vec<Vec<(usize, f64)>> = (0..n)
         .map(|u| {
             graph
                 .neighbors_ref(u)
                 .iter()
                 .filter(|&&v| v < n)
-                .map(|&v| (v, 1.0))
+                .map(|&v| (v, if v == u { 2.0 } else { 1.0 }))
                 .collect()
         })
         .collect();
@@ -192,7 +200,8 @@ pub fn louvain_weighted_seeded<G: WeightedGraph>(
         return vec![];
     }
 
-    // Build initial weighted adjacency using actual edge weights.
+    // Build initial weighted adjacency using actual edge weights. A
+    // self-loop counts twice, the convention aggregation uses.
     let mut adj: Vec<Vec<(usize, f64)>> = (0..n)
         .map(|u| {
             let mut nb = graph.neighbors(u);
@@ -200,7 +209,10 @@ pub fn louvain_weighted_seeded<G: WeightedGraph>(
             nb.dedup();
             nb.into_iter()
                 .filter(|&v| v < n)
-                .map(|v| (v, graph.edge_weight(u, v)))
+                .map(|v| {
+                    let w = graph.edge_weight(u, v);
+                    (v, if v == u { 2.0 * w } else { w })
+                })
                 .collect()
         })
         .collect();
@@ -472,6 +484,19 @@ mod tests {
             q.abs() < 1e-12,
             "all-one-community modularity = {q}, expected 0"
         );
+    }
+
+    #[test]
+    fn modularity_counts_self_loops_like_networkx() {
+        // Triangle 0-1-2, edge 2-3, self-loop on 3. networkx 3.x gives
+        // modularity(G, [{0, 1, 2}, {3}]) = 0.22 and 0.0 for one community.
+        let g = VecGraph {
+            adj: vec![vec![1, 2], vec![0, 2], vec![0, 1, 3], vec![2, 3]],
+        };
+        let q = modularity(&g, &[0, 0, 0, 1]);
+        assert!((q - 0.22).abs() < 1e-12, "modularity = {q}, expected 0.22");
+        let q_one = modularity(&g, &[0; 4]);
+        assert!(q_one.abs() < 1e-12, "one community = {q_one}, expected 0");
     }
 
     #[test]

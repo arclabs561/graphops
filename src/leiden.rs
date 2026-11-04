@@ -71,14 +71,15 @@ pub fn louvain_connected_seeded<G: GraphRef>(graph: &G, resolution: f64, seed: u
         return vec![];
     }
 
-    // Build initial weighted adjacency (unweighted = all 1.0).
+    // Build initial weighted adjacency (unweighted = all 1.0). A self-loop
+    // gets weight 2, the convention aggregation uses for internal edges.
     let mut adj: Vec<Vec<(usize, f64)>> = (0..n)
         .map(|u| {
             graph
                 .neighbors_ref(u)
                 .iter()
                 .filter(|&&v| v < n)
-                .map(|&v| (v, 1.0))
+                .map(|&v| (v, if v == u { 2.0 } else { 1.0 }))
                 .collect()
         })
         .collect();
@@ -179,7 +180,8 @@ pub fn louvain_connected_weighted_seeded<G: WeightedGraph>(
         return vec![];
     }
 
-    // Build initial weighted adjacency using actual edge weights.
+    // Build initial weighted adjacency using actual edge weights. A
+    // self-loop counts twice, the convention aggregation uses.
     let mut adj: Vec<Vec<(usize, f64)>> = (0..n)
         .map(|u| {
             let mut nb = graph.neighbors(u);
@@ -187,7 +189,10 @@ pub fn louvain_connected_weighted_seeded<G: WeightedGraph>(
             nb.dedup();
             nb.into_iter()
                 .filter(|&v| v < n)
-                .map(|v| (v, graph.edge_weight(u, v)))
+                .map(|v| {
+                    let w = graph.edge_weight(u, v);
+                    (v, if v == u { 2.0 * w } else { w })
+                })
                 .collect()
         })
         .collect();
