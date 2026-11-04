@@ -12,7 +12,7 @@ show the graph representation that each algorithm accepts. See the
 
 ```toml
 [dependencies]
-graphops = "0.5.3"
+graphops = "0.6"
 ```
 
 ## PageRank
