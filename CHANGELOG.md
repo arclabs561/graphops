@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-04
+
 ### Changed
 
 - Self-loops follow the networkx convention: `modularity` counts a
