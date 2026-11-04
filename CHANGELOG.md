@@ -19,6 +19,23 @@
   self-loops, as networkx does. A self-loop counted toward the degree, so a
   triangle with a self-loop on node 0 gave C(0) = 1/3 instead of 1.
 
+- `newman_betweenness` excludes each pair's source and sink from that pair's
+  contribution, as networkx `current_flow_betweenness_centrality` does, so
+  scores lie in the documented [0, 1]. Endpoints received 1/2 per pair: a
+  6-node star scored 1.25 at the centre and 0.25 at each leaf instead of 1 and
+  0. Scores change on every graph.
+
+- The parallel walk generators (`generate_walks_ref_parallel*`,
+  `generate_biased_walks_ref_parallel*`,
+  `generate_biased_walks_precomp_ref_parallel_from_nodes`) give each walk its
+  own ChaCha stream. Per-walk seeds mixed from `node ^ index` collided, so
+  distinct walks repeated the same steps (33 identical pairs among 64 walks
+  on a 64-cycle). Walks for a given seed change; they remain independent of
+  the Rayon thread count.
+
+- The rejection-sampling biased walk generators panic when `p` or `q` is
+  zero, negative, infinite or NaN instead of looping forever.
+
 ## [0.5.3] - 2026-10-30
 
 ### Fixed
