@@ -22,7 +22,7 @@ rand = "0.9"
 rand_chacha = "0.9"
 rand_distr = "0.5"
 rayon = { version = "1.10", optional = true }
-ordered-float = "4.2"
+ordered-float = "5.5"
 thiserror = "2.0"
 petgraph = { version = "0.6", optional = true }
 innr = { version = "0.6", optional = true }
