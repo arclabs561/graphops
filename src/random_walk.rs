@@ -21,9 +21,13 @@ pub struct WalkConfig {
     pub walks_per_node: usize,
     /// node2vec return parameter. `p < 1` biases walks toward revisiting
     /// the previous node (local exploration); `p > 1` discourages returning.
+    /// Must be finite and > 0: the `generate_biased_walks*` functions in this
+    /// module panic otherwise.
     pub p: f32,
     /// node2vec in-out parameter. `q < 1` biases walks outward (DFS-like);
     /// `q > 1` keeps walks close to the origin (BFS-like).
+    /// Must be finite and > 0: the `generate_biased_walks*` functions in this
+    /// module panic otherwise.
     pub q: f32,
     /// Seed for the deterministic RNG. Same seed + same graph + same config
     /// always produces identical walks.
@@ -448,6 +452,12 @@ fn sample_biased_rejection<R: Rng>(
     p: f32,
     q: f32,
 ) -> usize {
+    // With p or q zero, infinite or NaN, some step has acceptance ratio 0 or
+    // NaN for every candidate and the loop below never exits.
+    assert!(
+        p.is_finite() && p > 0.0 && q.is_finite() && q > 0.0,
+        "node2vec p and q must be finite and > 0 (got p = {p}, q = {q})"
+    );
     let max_prob = (1.0 / p).max(1.0).max(1.0 / q);
     loop {
         let candidate = *neighbors.choose(rng).unwrap();
@@ -514,10 +524,12 @@ pub fn generate_walks_ref_parallel_from_nodes<G: GraphRef + Sync>(
 
     jobs.par_iter()
         .enumerate()
-        .map(|(i, (epoch, node))| {
-            let seed = mix64(config.seed ^ ((*epoch as u64) << 32) ^ (*node as u64) ^ (i as u64));
-            let mut rng = ChaCha8Rng::seed_from_u64(seed);
-            unbiased_walk_ref(graph, *node, config.length, &mut rng)
+        .map(|(i, &(_, node))| {
+            // One ChaCha stream per job index: distinct for every walk. Seeds
+            // mixed from `node ^ i` collided and gave walks identical steps.
+            let mut rng = ChaCha8Rng::seed_from_u64(config.seed);
+            rng.set_stream(i as u64);
+            unbiased_walk_ref(graph, node, config.length, &mut rng)
         })
         .collect()
 }
@@ -559,10 +571,11 @@ pub fn generate_biased_walks_ref_parallel_from_nodes<G: GraphRef + Sync>(
 
     jobs.par_iter()
         .enumerate()
-        .map(|(i, (epoch, node))| {
-            let seed = mix64(config.seed ^ ((*epoch as u64) << 32) ^ (*node as u64) ^ (i as u64));
-            let mut rng = ChaCha8Rng::seed_from_u64(seed);
-            biased_walk_ref(graph, *node, config, &mut rng)
+        .map(|(i, &(_, node))| {
+            // One ChaCha stream per job index, as in `generate_walks_ref_parallel_from_nodes`.
+            let mut rng = ChaCha8Rng::seed_from_u64(config.seed);
+            rng.set_stream(i as u64);
+            biased_walk_ref(graph, node, config, &mut rng)
         })
         .collect()
 }

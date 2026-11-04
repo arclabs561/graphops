@@ -494,19 +494,11 @@ pub fn generate_biased_walks_precomp_ref_parallel_from_nodes(
 
     jobs.par_iter()
         .enumerate()
-        .map(|(i, (epoch, node))| {
-            fn mix64(mut x: u64) -> u64 {
-                x ^= x >> 30;
-                x = x.wrapping_mul(0xbf58476d1ce4e5b9);
-                x ^= x >> 27;
-                x = x.wrapping_mul(0x94d049bb133111eb);
-                x ^= x >> 31;
-                x
-            }
-
-            let seed = mix64(config.seed ^ ((*epoch as u64) << 32) ^ (*node as u64) ^ (i as u64));
-            let mut rng = ChaCha8Rng::seed_from_u64(seed);
-            biased_walk_precomp(pre, *node, config.length, &mut rng)
+        .map(|(i, &(_, node))| {
+            // One ChaCha stream per job index: distinct for every walk.
+            let mut rng = ChaCha8Rng::seed_from_u64(config.seed);
+            rng.set_stream(i as u64);
+            biased_walk_precomp(pre, node, config.length, &mut rng)
         })
         .collect()
 }

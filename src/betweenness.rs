@@ -206,8 +206,10 @@ pub struct NewmanBetweennessRun {
 /// current and contribute 0.
 ///
 /// The edge current on \\((i,j)\\) is \\(|v_i - v_j|\\), and the contribution
-/// to node \\(k\\)'s betweenness is
-/// \\(\\tfrac{1}{2} \\sum_{j \\in N(k)} |v_k - v_j|\\).
+/// to node \\(k \\notin \\{s, t\\}\\)'s betweenness is
+/// \\(\\tfrac{1}{2} \\sum_{j \\in N(k)} |v_k - v_j|\\). The source and sink
+/// themselves get nothing from their own pair, matching networkx
+/// `current_flow_betweenness_centrality`.
 ///
 /// After summing over all pairs the result is divided by
 /// \\(\\tfrac{(n-1)(n-2)}{2}\\) to normalize into \\([0, 1]\\).
@@ -357,8 +359,14 @@ pub fn newman_betweenness_run<G: GraphRef>(
                 all_converged = false;
             }
 
-            // Accumulate betweenness: for each node k, add (1/2) * sum_{j in N(k)} |v[k] - v[j]|.
+            // Accumulate betweenness: for each node k other than the source and
+            // sink, add (1/2) * sum_{j in N(k)} |v[k] - v[j]|. Endpoints are
+            // excluded, as in networkx and Brandes-Fleischer (2005); counting
+            // them adds 1/2 per pair and breaks the [0, 1] normalization.
             for k in 0..n {
+                if k == s || k == t {
+                    continue;
+                }
                 let mut flow_k = 0.0f64;
                 for &j in neighbors[k] {
                     flow_k += (v[k] - v[j]).abs();
