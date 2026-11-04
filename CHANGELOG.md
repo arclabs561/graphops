@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Self-loops follow the networkx convention: `modularity` counts a
+  self-loop twice in its node's degree and once as an internal edge, and
+  Louvain and connectivity-refined Louvain (weighted and unweighted) start
+  a self-loop at twice its weight, the convention their aggregation step
+  already used. Graphs without self-loops are unaffected.
+
 ### Added
 
 - `WeightedGraph::stored_weights(node)`, a defaulted method that yields every
